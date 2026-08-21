@@ -1,6 +1,6 @@
 # Stapler
 
-[![CI](https://github.com/stapler-adapter/stapler/actions/workflows/ci.yml/badge.svg)](https://github.com/stapler-adapter/stapler/actions/workflows/ci.yml)
+[![CI](https://github.com/MYehia565/stapler/actions/workflows/ci.yml/badge.svg)](https://github.com/MYehia565/stapler/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 **Stapler** is a universal [Paperclip](https://github.com/paperclipai/paperclip) external adapter for **OpenAI-compatible** LLM APIs (`GET /v1/models`, `POST /v1/chat/completions`).
@@ -47,7 +47,7 @@ Bind keys through Paperclip **Secret access** using the same variable names.
 ### 2. Install the adapter
 
 ```bash
-git clone https://github.com/stapler-adapter/stapler.git
+git clone https://github.com/MYehia565/stapler.git
 cd stapler
 npm ci
 npm run build
@@ -168,11 +168,11 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md), [VERIFICATION.md](./VERIFICATION.md), 
 
 ## Publishing this repo
 
-After creating `github.com/stapler-adapter/stapler` (or your org):
+After creating `github.com/MYehia565/stapler` (or your org):
 
 1. Update `repository` in [package.json](./package.json) if the org/name differs
 2. `git add . && git commit -m "Initial public release: Stapler 1.0.0"`
-3. `git remote add origin git@github.com:stapler-adapter/stapler.git`
+3. `git remote add origin git@github.com:MYehia565/stapler.git`
 4. `git push -u origin main`
 5. Optional: tag `v1.0.0` for a GitHub release
 

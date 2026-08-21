@@ -7,12 +7,12 @@
   "author": "Stapler contributors",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/stapler-adapter/stapler.git"
+    "url": "git+https://github.com/MYehia565/stapler.git"
   },
   "bugs": {
-    "url": "https://github.com/stapler-adapter/stapler/issues"
+    "url": "https://github.com/MYehia565/stapler/issues"
   },
-  "homepage": "https://github.com/stapler-adapter/stapler#readme",
+  "homepage": "https://github.com/MYehia565/stapler#readme",
   "keywords": [
     "paperclip",
     "paperclip-adapter",

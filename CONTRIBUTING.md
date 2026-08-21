@@ -5,7 +5,7 @@ Thank you for helping improve Stapler. This project is a [Paperclip](https://git
 ## Development setup
 
 ```bash
-git clone https://github.com/stapler-adapter/stapler.git
+git clone https://github.com/MYehia565/stapler.git
 cd stapler
 npm install
 npm test
@@ -38,7 +38,7 @@ This project follows the [Code of Conduct](./CODE_OF_CONDUCT.md).
 
 ## Reporting issues
 
-Use [GitHub Issues](https://github.com/stapler-adapter/stapler/issues) and include:
+Use [GitHub Issues](https://github.com/MYehia565/stapler/issues) and include:
 
 - Stapler version
 - Paperclip version (if known)

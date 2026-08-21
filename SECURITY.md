@@ -10,7 +10,7 @@
 
 Please **do not** open a public GitHub issue for security-sensitive reports.
 
-Use [GitHub Private Vulnerability Reporting](https://github.com/stapler-adapter/stapler/security/advisories/new) on this repository. Include:
+Use [GitHub Private Vulnerability Reporting](https://github.com/MYehia565/stapler/security/advisories/new) on this repository. Include:
 
 - Description of the issue
 - Steps to reproduce

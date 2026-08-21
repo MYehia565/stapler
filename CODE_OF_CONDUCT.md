@@ -46,7 +46,7 @@ an individual is officially representing the community in public spaces.
 ## Enforcement
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
-reported to the maintainers via [GitHub Security Advisories](https://github.com/stapler-adapter/stapler/security/advisories/new)
+reported to the maintainers via [GitHub Security Advisories](https://github.com/MYehia565/stapler/security/advisories/new)
 or the contact path in [SECURITY.md](./SECURITY.md).
 
 All complaints will be reviewed and investigated promptly and fairly.
