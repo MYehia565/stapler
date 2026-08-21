@@ -1,0 +1,22 @@
+node_modules/
+dist/
+dist-test/
+dist-verify/
+*.tsbuildinfo
+.env
+.env.*
+verification-e2e.json
+verification-runtime.json
+
+# Local agent-skills tooling (not part of the published adapter)
+.agents/
+skills-lock.json
+pnpm-lock.yaml
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.log
+*Zone.Identifier

@@ -1,0 +1,66 @@
+{
+  "name": "stapler",
+  "version": "1.0.0",
+  "description": "Universal OpenAI-compatible Paperclip adapter with multi-provider STAPLER_* env slots",
+  "license": "MIT",
+  "type": "module",
+  "author": "Stapler contributors",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/stapler-adapter/stapler.git"
+  },
+  "bugs": {
+    "url": "https://github.com/stapler-adapter/stapler/issues"
+  },
+  "homepage": "https://github.com/stapler-adapter/stapler#readme",
+  "keywords": [
+    "paperclip",
+    "paperclip-adapter",
+    "openai",
+    "openai-compatible",
+    "llm",
+    "agent",
+    "mcp",
+    "openrouter",
+    "groq",
+    "together-ai",
+    "fireworks",
+    "deepseek",
+    "mistral",
+    "ollama",
+    "litellm",
+    "stapler"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "paperclip": {
+    "adapterUiParser": "1.4.2"
+  },
+  "exports": {
+    ".": "./dist/index.js",
+    "./server": "./dist/server/index.js",
+    "./ui-parser": "./dist/ui-parser.js"
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "tsc -p tsconfig.test.json && node --test \"dist-test/tests/**/*.test.js\"",
+    "verify:build": "npm run build && tsc -p tsconfig.verify.json",
+    "verify:e2e": "npm run verify:build && node dist-verify/scripts/verify-e2e.js",
+    "verify:runtime": "npm run verify:build && node dist-verify/scripts/verify-runtime.js"
+  },
+  "dependencies": {
+    "@paperclipai/adapter-utils": "^2026.722.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2",
+    "@types/node": "^22.10.0"
+  }
+}
