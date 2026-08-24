@@ -112,8 +112,12 @@ export function buildToolAvailabilityMessage(
 
   lines.push(
     workspaceTools.length
-      ? `Workspace filesystem tools (files/shell only, not MCP): ${workspaceTools.join(", ")}.`
+      ? `Workspace filesystem tools (files/shell/search/network helpers, not MCP): ${workspaceTools.join(", ")}.`
       : "No workspace filesystem tools are available in this run.",
+  );
+
+  lines.push(
+    "Do not repeat the same tool with the same arguments when the previous result already answered the question. Loop protection will soft-warn, then block repeated tools, then abort the run.",
   );
 
   return lines.join("\n");
@@ -249,7 +253,7 @@ export function buildSignalCommanderPrompt(input: SignalCommanderPromptInput): s
       "Do not reply with generic readiness questions such as 'what task should I execute?'",
       "Use the issue/task description, comments, wake context, and session handoff as authoritative inputs.",
       "Every name in this run's tools array is a callable OpenAI function: MCP/Composio tools, issue disposition tools, and workspace filesystem tools.",
-      "Workspace helpers (list_dir, read_file, write_file, exec_command) are only for files and shell. They are not the full tool set. Do not treat the workspace list as proof that Notion/GitHub/email tools are missing.",
+      "Workspace helpers (list_dir, read_file, write_file, str_replace, grep_search, glob_files, http_fetch, web_search, exec_command, …) cover files, search, and public HTTP. They are not the full tool set when MCP tools are also listed.",
       "If an MCP/Composio function is in the tools array, call it. The declared name may be prefixed (mcp_… or COMPOSIO_…) rather than a short slug like NOTION_SEARCH.",
       "Paperclip company data may be available through governed tools. Use those tools instead of guessing.",
       "When paperclip_update_issue is available, set a final issue disposition before ending the run (done, blocked, or in_review with a comment).",

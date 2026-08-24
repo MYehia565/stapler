@@ -251,15 +251,38 @@ export function resolvePaperclipAuthToken(
   );
 }
 
-function absoluteUrl(
+/**
+ * Resolve a Paperclip session resource URL against the configured API base.
+ *
+ * Session create returns root-absolute paths (`/api/tool-gateway/tools`) while
+ * `paperclipApiUrl` usually already ends in `/api`. Naively concatenating those
+ * yields `/api/api/...` and Paperclip responds 404 "API route not found".
+ */
+export function joinPaperclipResourceUrl(
   baseUrl: string,
   value: string,
 ): string {
-  if (/^https?:\/\//i.test(value)) {
-    return value;
+  const trimmed = value.trim();
+
+  if (!trimmed) {
+    return baseUrl.replace(/\/+$/, "");
   }
 
-  return `${baseUrl}${value.startsWith("/") ? "" : "/"}${value}`;
+  if (/^https?:\/\//i.test(trimmed)) {
+    return trimmed;
+  }
+
+  if (trimmed.startsWith("/")) {
+    try {
+      return `${new URL(baseUrl).origin}${trimmed}`;
+    } catch {
+      const withoutApiSuffix = baseUrl.replace(/\/api\/?$/i, "");
+      return `${withoutApiSuffix.replace(/\/+$/, "")}${trimmed}`;
+    }
+  }
+
+  const normalizedBase = baseUrl.replace(/\/+$/, "");
+  return `${normalizedBase}/${trimmed}`;
 }
 
 async function paperclipFetch(
@@ -460,13 +483,13 @@ export async function createToolGatewaySession(
       data.token,
 
     toolsUrl:
-      absoluteUrl(
+      joinPaperclipResourceUrl(
         base,
         data.toolsUrl,
       ),
 
     callUrl:
-      absoluteUrl(
+      joinPaperclipResourceUrl(
         base,
         data.callUrl,
       ),

@@ -19,14 +19,21 @@ function ctxFor(workspace: string) {
 }
 
 describe("local tools sandbox", () => {
-  it("lists OpenAI function schemas for all five tools", () => {
+  it("lists OpenAI function schemas for the local tool suite", () => {
     const tools = listLocalTools();
     const names = tools.map((tool) => tool.function.name).sort();
     assert.deepEqual(names, [
+      "delete_file",
       "exec_command",
+      "glob_files",
+      "grep_search",
+      "http_fetch",
       "list_dir",
       "list_directory",
+      "move_file",
       "read_file",
+      "str_replace",
+      "web_search",
       "write_file",
     ]);
     for (const tool of tools) {
@@ -162,6 +169,43 @@ describe("local tools sandbox", () => {
           { command: "node hang.js" },
         ),
       /timed out/i,
+    );
+  });
+
+  it("edits, searches, and globs inside the workspace", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "stapler-local-"));
+    await writeFile(path.join(root, "a.ts"), "const alpha = 1;\n", "utf8");
+    await writeFile(path.join(root, "b.ts"), "const beta = 2;\n", "utf8");
+
+    const replaced = (await callLocalTool(ctxFor(root), "str_replace", {
+      path: "a.ts",
+      old_string: "alpha",
+      new_string: "gamma",
+    })) as { replacements: number };
+    assert.equal(replaced.replacements, 1);
+    assert.match(await readFile(path.join(root, "a.ts"), "utf8"), /gamma/);
+
+    const grep = (await callLocalTool(ctxFor(root), "grep_search", {
+      pattern: "gamma",
+    })) as { matches: Array<{ path: string }> };
+    assert.ok(grep.matches.some((row) => row.path === "a.ts"));
+
+    const glob = (await callLocalTool(ctxFor(root), "glob_files", {
+      pattern: "*.ts",
+    })) as { files: string[] };
+    assert.ok(glob.files.includes("a.ts"));
+    assert.ok(glob.files.includes("b.ts"));
+  });
+
+  it("rejects http_fetch to private hosts", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "stapler-local-"));
+
+    await assert.rejects(
+      () =>
+        callLocalTool(ctxFor(root), "http_fetch", {
+          url: "http://127.0.0.1:9/",
+        }),
+      /blocked or private host/i,
     );
   });
 });

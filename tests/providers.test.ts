@@ -52,7 +52,7 @@ function clearStaplerEnv(): void {
 }
 
 describe("providerNameFromWebUrl", () => {
-  it("extracts brand names from common hosts", () => {
+  it("uses the brand label before the public suffix", () => {
     assert.equal(
       providerNameFromWebUrl("https://api.openai.com/v1"),
       "openai",
@@ -66,12 +66,56 @@ describe("providerNameFromWebUrl", () => {
       "groq",
     );
     assert.equal(
+      providerNameFromWebUrl("https://api.together.xyz/v1"),
+      "together",
+    );
+    assert.equal(
+      providerNameFromWebUrl("https://api.fireworks.ai/inference/v1"),
+      "fireworks",
+    );
+    assert.equal(
+      providerNameFromWebUrl("https://api.mistral.ai/v1"),
+      "mistral",
+    );
+    assert.equal(
       providerNameFromWebUrl("http://localhost:4000/v1"),
       "localhost",
     );
     assert.equal(
       providerNameFromWebUrl("http://127.0.0.1:11434/v1"),
       "slot1",
+    );
+  });
+
+  it("strips nested gateway prefixes and keeps the brand before the TLD", () => {
+    assert.equal(
+      providerNameFromWebUrl("https://api.endpoints.anyscale.com/v1"),
+      "anyscale",
+    );
+    assert.equal(
+      providerNameFromWebUrl(
+        "https://my-resource.openai.azure.com/openai/deployments/x",
+      ),
+      "azure",
+    );
+    assert.equal(
+      providerNameFromWebUrl("https://router.huggingface.co/v1"),
+      "huggingface",
+    );
+    assert.equal(
+      providerNameFromWebUrl("https://gateway.api.deepseek.com/v1"),
+      "deepseek",
+    );
+  });
+
+  it("handles multi-part public suffixes and short brands like x.ai", () => {
+    assert.equal(
+      providerNameFromWebUrl("https://api.models.example.co.uk/v1"),
+      "example",
+    );
+    assert.equal(
+      providerNameFromWebUrl("https://api.x.ai/v1"),
+      "xai",
     );
   });
 });

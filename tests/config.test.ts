@@ -96,13 +96,18 @@ describe("Stapler UI config resolution", () => {
       validateStaplerConfig({
         temperature: 3,
         maxTokens: 0,
-        maxToolRounds: 21,
+        maxToolRounds: 1001,
+        loopProtectionMode: "wat",
+        loopSoftAfter: 5,
+        loopFirmAfter: 4,
         extraBody: "[1, 2, 3]",
       }),
       [
         "Temperature must be between 0 and 2.",
         "Max output tokens must be a positive integer.",
-        "Max tool rounds must be an integer between 1 and 20.",
+        "Max tool rounds must be an integer between 1 and 1000.",
+        "Loop protection mode must be one of: off, advisory, balanced, strict, custom.",
+        "Loop protection thresholds must increase from soft to firm to hard.",
         "Extra request body must be a JSON object.",
       ],
     );

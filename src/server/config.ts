@@ -4,6 +4,12 @@ import {
   resolveProviderBaseUrl,
   slotExtraValidationErrors,
 } from "./providers.js";
+import {
+  getLoopProtectionPreset,
+  LOOP_PROTECTION_MODES,
+  type LoopProtectionConfig,
+  type LoopProtectionMode,
+} from "./loop-protection.js";
 
 export const DEFAULT_PAPERCLIP_API_URL =
   "https://agent.signalpost.net/api";
@@ -12,9 +18,113 @@ export const DEFAULT_REQUEST_TIMEOUT_SEC = 300;
 export const MIN_REQUEST_TIMEOUT_SEC = 5;
 export const MAX_REQUEST_TIMEOUT_SEC = 3600;
 
-export const DEFAULT_RUN_TIMEOUT_SEC = 1800;
+export const DEFAULT_RUN_TIMEOUT_SEC = 7200;
 export const MIN_RUN_TIMEOUT_SEC = 30;
 export const MAX_RUN_TIMEOUT_SEC = 21600;
+
+export const DEFAULT_MAX_TOOL_ROUNDS = 1000;
+export const MIN_MAX_TOOL_ROUNDS = 1;
+export const MAX_MAX_TOOL_ROUNDS = 1000;
+
+function parsePositiveInt(
+  value: unknown,
+): number | null {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    return null;
+  }
+  return parsed;
+}
+
+function parseBooleanLike(
+  value: unknown,
+): boolean | null {
+  if (typeof value === "boolean") {
+    return value;
+  }
+
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const normalized =
+    value.trim().toLowerCase();
+  if (
+    normalized === "true" ||
+    normalized === "on" ||
+    normalized === "yes"
+  ) {
+    return true;
+  }
+  if (
+    normalized === "false" ||
+    normalized === "off" ||
+    normalized === "no"
+  ) {
+    return false;
+  }
+  return null;
+}
+
+export function resolveLoopProtectionMode(
+  value: unknown,
+): LoopProtectionMode {
+  const mode =
+    typeof value === "string"
+      ? value.trim().toLowerCase()
+      : "";
+
+  return (
+    LOOP_PROTECTION_MODES.find(
+      (entry) => entry === mode,
+    ) ?? "balanced"
+  );
+}
+
+export function resolveLoopProtectionConfig(
+  config: Record<string, unknown>,
+): LoopProtectionConfig {
+  const mode =
+    resolveLoopProtectionMode(
+      config.loopProtectionMode,
+    );
+  const base =
+    getLoopProtectionPreset(mode);
+
+  return {
+    ...base,
+    mode,
+    softAfter:
+      parsePositiveInt(config.loopSoftAfter) ??
+      base.softAfter,
+    firmAfter:
+      parsePositiveInt(config.loopFirmAfter) ??
+      base.firmAfter,
+    hardAfter:
+      parsePositiveInt(config.loopHardAfter) ??
+      base.hardAfter,
+    sameCallSoftAfter:
+      parsePositiveInt(
+        config.loopSameCallSoftAfter,
+      ) ?? base.sameCallSoftAfter,
+    sameCallFirmAfter:
+      parsePositiveInt(
+        config.loopSameCallFirmAfter,
+      ) ?? base.sameCallFirmAfter,
+    sameCallHardAfter:
+      parsePositiveInt(
+        config.loopSameCallHardAfter,
+      ) ?? base.sameCallHardAfter,
+    blockRepeatedTools:
+      parseBooleanLike(
+        config.loopBlockRepeatedTools,
+      ) ?? base.blockRepeatedTools,
+    abortRepeatedSuccesses:
+      parseBooleanLike(
+        config.loopAbortRepeatedSuccesses,
+      ) ?? base.abortRepeatedSuccesses,
+  };
+}
 
 export function resolveRequestTimeoutSec(
   value: unknown,
@@ -157,11 +267,11 @@ export function validateStaplerConfig(
 
     if (
       !Number.isInteger(maxToolRounds) ||
-      maxToolRounds < 1 ||
-      maxToolRounds > 20
+      maxToolRounds < MIN_MAX_TOOL_ROUNDS ||
+      maxToolRounds > MAX_MAX_TOOL_ROUNDS
     ) {
       errors.push(
-        "Max tool rounds must be an integer between 1 and 20.",
+        `Max tool rounds must be an integer between ${MIN_MAX_TOOL_ROUNDS} and ${MAX_MAX_TOOL_ROUNDS}.`,
       );
     }
   }
@@ -194,6 +304,76 @@ export function validateStaplerConfig(
         `Run timeout must be an integer between ${MIN_RUN_TIMEOUT_SEC} and ${MAX_RUN_TIMEOUT_SEC} seconds.`,
       );
     }
+  }
+
+  if (
+    config.loopProtectionMode !== undefined &&
+    !LOOP_PROTECTION_MODES.includes(
+      String(config.loopProtectionMode)
+        .trim()
+        .toLowerCase() as LoopProtectionMode,
+    )
+  ) {
+    errors.push(
+      `Loop protection mode must be one of: ${LOOP_PROTECTION_MODES.join(", ")}.`,
+    );
+  }
+
+  const loopThresholdFields = [
+    "loopSoftAfter",
+    "loopFirmAfter",
+    "loopHardAfter",
+    "loopSameCallSoftAfter",
+    "loopSameCallFirmAfter",
+    "loopSameCallHardAfter",
+  ] as const;
+
+  for (const field of loopThresholdFields) {
+    if (
+      config[field] !== undefined &&
+      parsePositiveInt(config[field]) === null
+    ) {
+      errors.push(
+        `${field} must be a positive integer.`,
+      );
+    }
+  }
+
+  for (const field of [
+    "loopBlockRepeatedTools",
+    "loopAbortRepeatedSuccesses",
+  ] as const) {
+    if (
+      config[field] !== undefined &&
+      parseBooleanLike(config[field]) === null
+    ) {
+      errors.push(
+        `${field} must be on/off (or true/false).`,
+      );
+    }
+  }
+
+  const loopConfig =
+    resolveLoopProtectionConfig(config);
+
+  const ordering = [
+    loopConfig.softAfter <= loopConfig.firmAfter,
+    loopConfig.sameCallSoftAfter <=
+      loopConfig.sameCallFirmAfter,
+    loopConfig.sameCallFirmAfter <=
+      loopConfig.sameCallHardAfter,
+  ];
+
+  if (loopConfig.abortRepeatedSuccesses) {
+    ordering.push(
+      loopConfig.firmAfter <= loopConfig.hardAfter,
+    );
+  }
+
+  if (!ordering.every(Boolean)) {
+    errors.push(
+      "Loop protection thresholds must increase from soft to firm to hard.",
+    );
   }
 
   if (

@@ -16,7 +16,9 @@ Configure up to **16 providers** with numbered env slots — no code changes, no
 - Up to **16 provider slots** via `STAPLER_WEB_URL_n` + `STAPLER_API_KEY_n`
 - **Union model discovery** — Models / Detect / Refresh list every configured slot
 - Prefixed model ids when multiple slots exist (`openai::gpt-4o`, `groq::llama-3.3-70b`)
-- Sandboxed workspace tools: `list_dir`, `read_file`, `write_file`, `exec_command` (`exec_command` is a full shell whose working directory must stay inside the workspace; it is not a command allowlist)
+- Sandboxed workspace tools: `list_dir`, `read_file`, `write_file`, `str_replace`, `delete_file`, `move_file`, `grep_search`, `glob_files`, `http_fetch`, `web_search`, `exec_command` (full host shell; cwd stays in the workspace)
+- Default **1000** tool rounds with configurable **loop protection** (`off`, `advisory`, `balanced`, `strict`, or custom thresholds)
+- Default run timeout **7200s** (raise further for very long jobs)
 - Paperclip Tool Gateway + MCP when host auth is available
 - Issue tools: `paperclip_checkout_issue`, `paperclip_update_issue`, `paperclip_add_comment`
 
@@ -58,7 +60,32 @@ npm run build
 
 - Adapter type: **`stapler`**
 - **LLM provider** select: pick a slot id from the dropdown (derived from hostname)
+- **Loop protection mode**: `balanced` by default; choose `off`, `advisory`, `balanced`, `strict`, or `custom`
 - Run **Environment test**, then a heartbeat run
+
+---
+
+## Agent runtime controls
+
+- **Max tool rounds** defaults to `1000`. A round is one model response that can request one or more tool calls, followed by the next model turn.
+- **Run timeout** defaults to `7200` seconds and still caps the total wall-clock runtime even if tool rounds remain.
+- **Loop protection mode** defaults to `balanced`:
+  - `off`: no loop intervention
+  - `advisory`: warnings only
+  - `balanced`: warn early, optionally block redundant tools later, hard-stop mainly repeated failures
+  - `strict`: intervene earlier and can hard-stop repeated successful no-op loops
+  - `custom`: keep the mode UI but override thresholds below
+- **Advanced loop overrides** available in adapter config:
+  - `loopSoftAfter`
+  - `loopFirmAfter`
+  - `loopHardAfter`
+  - `loopSameCallSoftAfter`
+  - `loopSameCallFirmAfter`
+  - `loopSameCallHardAfter`
+  - `loopBlockRepeatedTools`
+  - `loopAbortRepeatedSuccesses`
+
+Stapler now treats repeated **same calls with the same results** as a stronger loop signal than repeated calls alone, which reduces false positives during normal work.
 
 ---
 
@@ -75,7 +102,7 @@ Stapler works with any host that exposes OpenAI-compatible `/models` and `/chat/
 | [DeepSeek](https://platform.deepseek.com) | `https://api.deepseek.com/v1` | `deepseek` | DeepSeek models |
 | [Mistral](https://docs.mistral.ai) | `https://api.mistral.ai/v1` | `mistral` | Mistral API |
 | [Cerebras](https://inference-docs.cerebras.ai) | `https://api.cerebras.ai/v1` | `cerebras` | Low-latency inference |
-| [xAI (Grok)](https://docs.x.ai) | `https://api.x.ai/v1` | `x` | Grok API |
+| [xAI (Grok)](https://docs.x.ai) | `https://api.x.ai/v1` | `xai` | Grok API |
 | [Perplexity](https://docs.perplexity.ai) | `https://api.perplexity.ai` | `perplexity` | Sonar models |
 | [Google Gemini](https://ai.google.dev/gemini-api/docs/openai) | `https://generativelanguage.googleapis.com/v1beta/openai/` | `googleapis` | OpenAI-compat layer |
 | [Azure OpenAI](https://learn.microsoft.com/azure/ai-services/openai/) | `https://{resource}.openai.azure.com/openai/deployments/{deployment}` | `azure` | Use deployment-specific path |
@@ -108,7 +135,7 @@ Stapler works with any host that exposes OpenAI-compatible `/models` and `/chat/
 
 ### How slot ids work
 
-Given `STAPLER_WEB_URL_n`, Stapler parses the hostname, strips a leading `api.` / `www.`, and uses the second-level domain label (e.g. `api.openai.com` → `openai`, `openrouter.ai` → `openrouter`). Bare IP addresses become `slot1`, `slot2`, … by slot index. The hostname `localhost` becomes `localhost`. When two URLs would collide, ids are deduplicated (`openai`, `openai-2`).
+Given `STAPLER_WEB_URL_n`, Stapler parses the hostname, strips common gateway prefixes (`api.`, `www.`, `gateway.`, …), and uses the **brand label immediately before the public suffix** (e.g. `api.openai.com` → `openai`, `openrouter.ai` → `openrouter`, `api.x.ai` → `xai`, `foo.example.co.uk` → `example`). Bare IP addresses become `slot1`, `slot2`, … by slot index. The hostname `localhost` becomes `localhost`. When two URLs would collide, ids are deduplicated (`openai`, `openai-2`).
 
 ### Multi-provider example
 
@@ -157,7 +184,7 @@ Aliases accepted: `STAPLER_API_KEY1` (no underscore before number).
 ```bash
 npm ci
 npm run typecheck
-npm test          # 86+ unit tests
+npm test          # 100+ unit tests
 npm run build
 npm run verify:e2e
 ```

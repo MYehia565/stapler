@@ -70,6 +70,8 @@ Verify e2e: npm run verify:e2e
 providerNameFromWebUrl("https://api.openai.com/v1")     // "openai"
 providerNameFromWebUrl("https://openrouter.ai/api/v1")  // "openrouter"
 providerNameFromWebUrl("https://api.groq.com/openai/v1") // "groq"
+providerNameFromWebUrl("https://api.x.ai/v1")            // "xai"
+providerNameFromWebUrl("https://api.models.example.co.uk/v1") // "example"
 providerNameFromWebUrl("http://localhost:4000/v1")      // "localhost"
 providerNameFromWebUrl("http://127.0.0.1:11434/v1")     // "slot1" (index fallback)
 ```
@@ -78,10 +80,10 @@ Algorithm:
 
 1. Parse URL; on failure → `slot{n}`.
 2. Hostname, lowercase, strip trailing dot.
-3. Strip a single leading `www.` then a single leading `api.`.
-4. Split on `.`. If the result is an IPv4/IPv6 host → `slot{n}`.
-5. If one label → that label (`localhost`).
-6. Otherwise brand = second-to-last label (`api.openai.com` → `openai`).
+3. If the result is an IPv4/IPv6 host → `slot{n}`.
+4. Strip leading gateway labels (`www`, `api`, `gateway`, `openai`, …) from the left.
+5. If one label remains → that label (`localhost`).
+6. Otherwise brand = label immediately before the public suffix (`.com` / `.ai` / `.co.uk` / …). Short brands (≤2 chars) append the TLD (`x.ai` → `xai`).
 7. Sanitize: `[a-z0-9]+` joined by `-`, max 32 chars. Empty → `slot{n}`.
 8. If the name collides with an earlier slot, append `-2`, `-3`, …
 

@@ -39,6 +39,47 @@ function isIpHost(hostname: string): boolean {
   return hostname.includes(":");
 }
 
+/**
+ * Leading labels that name the gateway, not the provider brand.
+ * Stripped from the left only (e.g. api.openai.com → openai.com).
+ */
+const GENERIC_HOST_PREFIXES = new Set([
+  "www",
+  "api",
+  "apis",
+  "gateway",
+  "proxy",
+  "openai",
+  "compatible",
+  "compat",
+  "v1",
+  "v2",
+  "v3",
+]);
+
+/**
+ * Multi-label public suffixes where the brand is the label before the whole
+ * suffix (example.co.uk → example, not co).
+ */
+const MULTI_PART_PUBLIC_SUFFIXES = [
+  "co.uk",
+  "com.au",
+  "com.br",
+  "com.cn",
+  "com.mx",
+  "com.tw",
+  "co.jp",
+  "co.in",
+  "co.kr",
+  "co.nz",
+  "co.za",
+  "com.sg",
+  "org.uk",
+  "net.au",
+  "ac.uk",
+  "gov.uk",
+] as const;
+
 function sanitizeProviderId(value: string): string {
   const parts = value
     .toLowerCase()
@@ -50,8 +91,79 @@ function sanitizeProviderId(value: string): string {
   return joined || "";
 }
 
+function stripGenericHostPrefixes(hostname: string): string {
+  const labels = hostname.split(".").filter(Boolean);
+
+  while (
+    labels.length > 2 &&
+    GENERIC_HOST_PREFIXES.has(labels[0]!)
+  ) {
+    labels.shift();
+  }
+
+  // Still strip a single leading www/api even on two-label hosts
+  // (api.openai.com → openai.com; www.x.ai → x.ai).
+  while (
+    labels.length >= 2 &&
+    (labels[0] === "www" || labels[0] === "api" || labels[0] === "apis")
+  ) {
+    labels.shift();
+  }
+
+  return labels.join(".");
+}
+
+function publicSuffixLength(labels: string[]): number {
+  if (labels.length < 2) {
+    return Math.min(labels.length, 1);
+  }
+
+  const host = labels.join(".");
+
+  for (const suffix of MULTI_PART_PUBLIC_SUFFIXES) {
+    if (host === suffix || host.endsWith(`.${suffix}`)) {
+      return suffix.split(".").length;
+    }
+  }
+
+  return 1;
+}
+
+/**
+ * Brand label immediately before the public suffix
+ * (openai.com → openai, openrouter.ai → openrouter, foo.co.uk → foo).
+ * Very short brands (x.ai → x) are joined with the TLD (xai) so the slot
+ * id stays recognizable in the UI.
+ */
+function brandFromHostLabels(labels: string[]): string {
+  if (labels.length === 0) {
+    return "";
+  }
+
+  if (labels.length === 1) {
+    return labels[0]!;
+  }
+
+  const suffixLen = publicSuffixLength(labels);
+  const brandIndex = labels.length - suffixLen - 1;
+
+  if (brandIndex < 0) {
+    return labels[0]!;
+  }
+
+  const brand = labels[brandIndex]!;
+  const tld = labels[brandIndex + 1] ?? "";
+
+  if (brand.length <= 2 && tld && /^[a-z]+$/i.test(tld)) {
+    return `${brand}${tld}`;
+  }
+
+  return brand;
+}
+
 /**
  * Derive a stable provider id from an OpenAI-compatible base URL hostname.
+ * Prefer the registrable brand (label before .com / .net / .ai / …).
  */
 export function providerNameFromWebUrl(
   webUrl: string,
@@ -71,21 +183,9 @@ export function providerNameFromWebUrl(
     return `slot${slotIndex}`;
   }
 
-  if (hostname.startsWith("www.")) {
-    hostname = hostname.slice(4);
-  }
-
-  if (hostname.startsWith("api.")) {
-    hostname = hostname.slice(4);
-  }
-
-  const labels = hostname.split(".").filter(Boolean);
-
-  if (labels.length === 1) {
-    return sanitizeProviderId(labels[0]!) || `slot${slotIndex}`;
-  }
-
-  const brand = labels.at(-2) ?? labels[0] ?? "";
+  const stripped = stripGenericHostPrefixes(hostname);
+  const labels = stripped.split(".").filter(Boolean);
+  const brand = brandFromHostLabels(labels);
 
   return sanitizeProviderId(brand) || `slot${slotIndex}`;
 }

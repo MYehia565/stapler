@@ -23,9 +23,10 @@ describe("buildToolAvailabilityMessage", () => {
     assert.match(message, /NOTION_SEARCH/);
     assert.match(
       message,
-      /Workspace filesystem tools \(files\/shell only, not MCP\): read_file, write_file\./,
+      /Workspace filesystem tools \(files\/shell\/search\/network helpers, not MCP\): read_file, write_file\./,
     );
     assert.match(message, /Do not report MCP tools as unavailable/);
+    assert.match(message, /Loop protection/);
     assert.doesNotMatch(message, /disposition tools are NOT available/);
   });
 

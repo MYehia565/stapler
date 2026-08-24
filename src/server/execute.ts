@@ -10,6 +10,9 @@ import {
 import { inferOpenAiCompatibleBiller } from "@paperclipai/adapter-utils";
 
 import {
+  DEFAULT_MAX_TOOL_ROUNDS,
+  MAX_MAX_TOOL_ROUNDS,
+  resolveLoopProtectionConfig,
   resolveRequestTimeoutSec,
   resolveRunTimeoutSec,
   validateStaplerConfig,
@@ -44,6 +47,7 @@ import {
 } from "./host-execution.js";
 import {
   listLocalTools,
+  LOCAL_MUTATING_TOOL_NAMES,
   toolContextFromExecution,
   workspaceRootWarning,
 } from "./local-tools.js";
@@ -59,6 +63,11 @@ import {
   parseToolArguments,
   toolRoundSignature,
 } from "./tool-call-protocol.js";
+import {
+  createLoopProtectionState,
+  evaluateLoopProtection,
+  loopBlockedToolResult,
+} from "./loop-protection.js";
 
 import {
   createToolGatewaySession,
@@ -258,6 +267,8 @@ export async function execute(
       config.runTimeoutSec,
       requestTimeoutSec,
     );
+  const loopProtectionConfig =
+    resolveLoopProtectionConfig(config);
 
   const runDeadline =
     Date.now() + runTimeoutSec * 1000;
@@ -267,11 +278,11 @@ export async function execute(
       Math.floor(
         Number(
           config.maxToolRounds,
-        ) || 8,
+        ) || DEFAULT_MAX_TOOL_ROUNDS,
       ),
       1,
     ),
-    20,
+    MAX_MAX_TOOL_ROUNDS,
   );
 
   const providerId =
@@ -595,9 +606,8 @@ export async function execute(
   let lastAssistantText = "";
 
   const MUTATING_TOOLS =
-    new Set([
-      "write_file",
-      "exec_command",
+    new Set<string>([
+      ...LOCAL_MUTATING_TOOL_NAMES,
       ...PAPERCLIP_ISSUE_TOOL_NAMES,
     ]);
 
@@ -676,9 +686,8 @@ export async function execute(
     let data: any = {};
 
     let responseText = "";
-    let previousToolRoundSignature = "";
-    let repeatedToolRoundCount = 0;
     let nudged = false;
+    const loopState = createLoopProtectionState();
 
     for (
       let round = 0;
@@ -732,7 +741,7 @@ export async function execute(
           role: "user",
           content: [
             `Budget notice: ${roundsRemaining} tool round(s) and about ${Math.round(remainingMs / 1000)}s remain.`,
-            "Stop inspecting the workspace. Perform the remaining work now with write_file or exec_command in this round.",
+            "Stop inspecting the workspace. Perform the remaining work now with write_file, str_replace, or exec_command in this round.",
             "Then reply with a summary of exactly what you changed, or state precisely what blocked you.",
           ].join(" "),
         });
@@ -971,6 +980,11 @@ export async function execute(
             error:
               parsedArguments.error,
           };
+        } else if (
+          loopState.blockedTools.has(returnedName) ||
+          loopState.blockedTools.has(originalName)
+        ) {
+          result = loopBlockedToolResult(returnedName);
         } else {
           try {
             result =
@@ -1032,31 +1046,40 @@ export async function execute(
           roundResults,
         );
 
-      if (
-        failedRound &&
-        currentToolRoundSignature ===
-          previousToolRoundSignature
-      ) {
-        repeatedToolRoundCount += 1;
-      } else if (failedRound) {
-        previousToolRoundSignature =
-          currentToolRoundSignature;
-        repeatedToolRoundCount = 1;
-      } else {
-        previousToolRoundSignature = "";
-        repeatedToolRoundCount = 0;
+      const loopDecision =
+        evaluateLoopProtection(
+          loopState,
+          {
+            toolCalls: normalizedToolCalls,
+            toolNames: normalizedToolCalls.map(
+              (call) =>
+                asString(call.function?.name, "").trim(),
+            ),
+            results: roundResults,
+            failedRound,
+            roundSignature:
+              currentToolRoundSignature,
+          },
+          loopProtectionConfig,
+        );
+
+      if (loopDecision.level !== "none" && loopDecision.message) {
+        try {
+          await ctx.onLog?.(
+            "stderr",
+            `[stapler] ${loopDecision.message}\n`,
+          );
+        } catch {
+          // Ignore log transport failures.
+        }
+
+        await progress(loopDecision.message);
       }
 
-      if (repeatedToolRoundCount >= 3) {
-        const repeatedErrors =
-          roundResults.filter(
-            isToolResultFailure,
-          );
-
+      if (loopDecision.abort) {
         return {
           exitCode: 1,
-          errorMessage:
-            `Stapler repeated the same failing tool-call round three times: ${JSON.stringify(repeatedErrors).slice(0, 2000)}`,
+          errorMessage: loopDecision.message,
           provider: providerId,
           model,
           signal: null,
@@ -1064,12 +1087,24 @@ export async function execute(
           resultJson: {
             ...progressJson(),
             response: data,
-            repeatedToolCalls:
-              currentToolRoundSignature,
-            repeatedToolResults:
-              roundResults,
+            loopProtection: {
+              level: loopDecision.level,
+              blockedTools: [...loopState.blockedTools],
+              actionSignature: currentToolRoundSignature,
+              results: roundResults,
+            },
           },
         };
+      }
+
+      if (
+        loopDecision.level === "soft" ||
+        loopDecision.level === "firm"
+      ) {
+        messages.push({
+          role: "user",
+          content: loopDecision.message,
+        });
       }
     }
 

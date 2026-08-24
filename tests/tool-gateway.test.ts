@@ -4,8 +4,48 @@ import { describe, it } from "node:test";
 import {
   allocateSafeToolName,
   gatewayToolsFromDiscoveryPayload,
+  joinPaperclipResourceUrl,
   MAX_GATEWAY_TOOL_NAME_LEN,
 } from "../src/server/tool-gateway.js";
+
+describe("joinPaperclipResourceUrl", () => {
+  it("does not double /api when session returns root-absolute toolsUrl", () => {
+    assert.equal(
+      joinPaperclipResourceUrl(
+        "https://agent.signalpost.net/api",
+        "/api/tool-gateway/tools",
+      ),
+      "https://agent.signalpost.net/api/tool-gateway/tools",
+    );
+    assert.equal(
+      joinPaperclipResourceUrl(
+        "http://localhost:3100/api",
+        "/api/tool-gateway/tools/call",
+      ),
+      "http://localhost:3100/api/tool-gateway/tools/call",
+    );
+  });
+
+  it("joins relative paths onto the configured API base", () => {
+    assert.equal(
+      joinPaperclipResourceUrl(
+        "http://localhost:3100/api",
+        "tool-gateway/tools",
+      ),
+      "http://localhost:3100/api/tool-gateway/tools",
+    );
+  });
+
+  it("passes through absolute http(s) URLs", () => {
+    assert.equal(
+      joinPaperclipResourceUrl(
+        "http://localhost:3100/api",
+        "https://edge.example/api/tool-gateway/tools",
+      ),
+      "https://edge.example/api/tool-gateway/tools",
+    );
+  });
+});
 
 describe("allocateSafeToolName", () => {
   it("keeps distinguishing Composio action suffixes under the 64-char cap", () => {

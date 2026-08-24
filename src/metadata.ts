@@ -56,9 +56,14 @@ Core fields:
 - provider (select): extracted slot id (openai, groq, openrouter, …) — drives runs and environment test
 - model (string, optional, default standard): profile alias, bare id, or slot::model prefix
 - baseUrl (string, optional, default empty): leave empty to follow the selected slot
-- cwd, instructionsFilePath, promptTemplate, temperature, maxTokens, maxToolRounds, extraBody, paperclipApiUrl, timeoutSec, runTimeoutSec
+- cwd, instructionsFilePath, promptTemplate, temperature, maxTokens, maxToolRounds (default 1000), extraBody, paperclipApiUrl, timeoutSec, runTimeoutSec
 - env (object, optional): bind STAPLER_API_KEY_n via Paperclip Secret access
 - extraBody (JSON, optional): merged after STAPLER_EXTRA_n; cannot set model, messages, or tools
+
+Local tools:
+- exec_command, list_dir, read_file (offset/limit), write_file, str_replace, delete_file, move_file, grep_search, glob_files, http_fetch, web_search
+- Loop protection is configurable per agent: off | advisory | balanced | strict | custom thresholds
+- Balanced default warns on repeated no-progress rounds, can block redundant tools later, and reserves hard abort mainly for repeated failures
 
 Model discovery:
 - listModels / refreshModels union every configured slot (prefixed ids when multiple slots exist)

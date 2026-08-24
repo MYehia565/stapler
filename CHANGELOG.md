@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Expanded local tools: `str_replace`, `delete_file`, `move_file`, `grep_search`, `glob_files`, `http_fetch`, `web_search` (plus ranged `read_file`)
+- Max tool rounds raised to **1000** (default 1000); default run timeout **7200s**
+- Three-level loop protection: soft nudge → firm tool block → hard abort on identical repeated actions
+
 ## 1.0.0 — Initial public release
 
 Stapler is a universal [Paperclip](https://github.com/paperclipai/paperclip) external adapter for OpenAI-compatible LLM APIs.

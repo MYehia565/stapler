@@ -4,10 +4,13 @@ import type {
 
 import {
   DEFAULT_PAPERCLIP_API_URL,
+  DEFAULT_MAX_TOOL_ROUNDS,
   DEFAULT_REQUEST_TIMEOUT_SEC,
   DEFAULT_RUN_TIMEOUT_SEC,
+  MAX_MAX_TOOL_ROUNDS,
   MAX_REQUEST_TIMEOUT_SEC,
   MAX_RUN_TIMEOUT_SEC,
+  MIN_MAX_TOOL_ROUNDS,
   MIN_REQUEST_TIMEOUT_SEC,
   MIN_RUN_TIMEOUT_SEC,
 } from "./config.js";
@@ -103,15 +106,46 @@ export function getConfigSchema(): AdapterConfigSchema {
         key: "maxToolRounds",
         label: "Max tool rounds",
         type: "number",
-        default: 8,
+        default: DEFAULT_MAX_TOOL_ROUNDS,
         group: "Tools",
         hint:
-          "Maximum LLM function-call rounds for one run (1–20).",
+          `Maximum LLM function-call rounds for one run (${MIN_MAX_TOOL_ROUNDS}–${MAX_MAX_TOOL_ROUNDS}). Smart loop protection still nudges or blocks redundant repetition.`,
         meta: {
-          min: 1,
-          max: 20,
+          min: MIN_MAX_TOOL_ROUNDS,
+          max: MAX_MAX_TOOL_ROUNDS,
           step: 1,
         },
+      },
+      {
+        key: "loopProtectionMode",
+        label: "Loop protection mode",
+        type: "select",
+        default: "balanced",
+        group: "Tools",
+        options: [
+          {
+            label: "Off",
+            value: "off",
+          },
+          {
+            label: "Advisory",
+            value: "advisory",
+          },
+          {
+            label: "Balanced",
+            value: "balanced",
+          },
+          {
+            label: "Strict",
+            value: "strict",
+          },
+          {
+            label: "Custom",
+            value: "custom",
+          },
+        ],
+        hint:
+          "How aggressively Stapler intervenes when the agent repeats the same tool usage. Balanced is the default: warn early, block redundant tools later, hard-stop only repeated failures.",
       },
       {
         key: "timeoutSec",
@@ -140,6 +174,82 @@ export function getConfigSchema(): AdapterConfigSchema {
           max: MAX_RUN_TIMEOUT_SEC,
           step: 30,
         },
+      },
+      {
+        key: "loopSoftAfter",
+        label: "Loop soft threshold",
+        type: "number",
+        group: "Advanced",
+        hint:
+          "Optional override: identical successful rounds before a warning. Leave empty to use the selected loop mode.",
+      },
+      {
+        key: "loopFirmAfter",
+        label: "Loop firm threshold",
+        type: "number",
+        group: "Advanced",
+        hint:
+          "Optional override: identical successful rounds before repeated tools are blocked. Leave empty to use the selected loop mode.",
+      },
+      {
+        key: "loopHardAfter",
+        label: "Loop hard threshold",
+        type: "number",
+        group: "Advanced",
+        hint:
+          "Optional override: identical failing rounds before the run aborts. Leave empty to use the selected loop mode.",
+      },
+      {
+        key: "loopSameCallSoftAfter",
+        label: "Same-call soft threshold",
+        type: "number",
+        group: "Advanced",
+        hint:
+          "Optional override: same tool with the same arguments before a warning.",
+      },
+      {
+        key: "loopSameCallFirmAfter",
+        label: "Same-call firm threshold",
+        type: "number",
+        group: "Advanced",
+        hint:
+          "Optional override: same tool with the same arguments before tool blocking starts.",
+      },
+      {
+        key: "loopSameCallHardAfter",
+        label: "Same-call hard threshold",
+        type: "number",
+        group: "Advanced",
+        hint:
+          "Optional override: same failing tool with the same arguments before the run aborts.",
+      },
+      {
+        key: "loopBlockRepeatedTools",
+        label: "Block repeated tools",
+        type: "select",
+        default: "",
+        group: "Advanced",
+        options: [
+          { label: "Use mode default", value: "" },
+          { label: "On", value: "on" },
+          { label: "Off", value: "off" },
+        ],
+        hint:
+          "Optional override for firm-level behavior. Off keeps loop protection advisory even in balanced/custom modes.",
+      },
+      {
+        key: "loopAbortRepeatedSuccesses",
+        label: "Abort repeated successes",
+        type: "select",
+        default: "",
+        group: "Advanced",
+        options: [
+          { label: "Use mode default", value: "" },
+          { label: "On", value: "on" },
+          { label: "Off", value: "off" },
+        ],
+        hint:
+          "Optional override. Off means hard-stop is reserved for repeated failures only.",
       },
       {
         key: "extraBody",

@@ -9,6 +9,11 @@ describe("isLocalToolName", () => {
     assert.equal(isLocalToolName("exec_command"), true);
     assert.equal(isLocalToolName("read_file"), true);
     assert.equal(isLocalToolName("write_file"), true);
+    assert.equal(isLocalToolName("str_replace"), true);
+    assert.equal(isLocalToolName("grep_search"), true);
+    assert.equal(isLocalToolName("glob_files"), true);
+    assert.equal(isLocalToolName("http_fetch"), true);
+    assert.equal(isLocalToolName("web_search"), true);
     assert.equal(isLocalToolName("list_dir"), true);
     assert.equal(isLocalToolName("list_directory"), true);
   });
