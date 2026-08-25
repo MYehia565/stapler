@@ -73,6 +73,7 @@ import {
   createToolGatewaySession,
   listGatewayTools,
   resolvePaperclipAuthToken,
+  resolvePaperclipRunId,
   revokeToolGatewaySession,
 } from "./tool-gateway.js";
 
@@ -377,7 +378,7 @@ export async function execute(
           unknown
         >,
 
-      runId: ctx.runId,
+      runId: resolvePaperclipRunId(ctx),
 
       skills: loadedSkills.skills,
 

@@ -252,6 +252,32 @@ export function resolvePaperclipAuthToken(
 }
 
 /**
+ * Heartbeat run id for Paperclip attribution (cross-issue writes require
+ * X-Paperclip-Run-Id). Prefer ctx.runId; fall back to wake context and
+ * PAPERCLIP_RUN_ID the way CLI adapters do.
+ */
+export function resolvePaperclipRunId(
+  ctx: AdapterExecutionContext,
+): string {
+  const context = parseObject(ctx.context);
+  const runtime =
+    (ctx.runtime ?? {}) as unknown as Record<string, unknown>;
+  const env = parseObject(
+    (ctx.config ?? {}).env,
+  );
+
+  return (
+    asString(ctx.runId, "").trim() ||
+    asString(context.runId, "").trim() ||
+    asString(context.paperclipRunId, "").trim() ||
+    asString(runtime.runId, "").trim() ||
+    asString(env.PAPERCLIP_RUN_ID, "").trim() ||
+    process.env.PAPERCLIP_RUN_ID?.trim() ||
+    ""
+  );
+}
+
+/**
  * Resolve a Paperclip session resource URL against the configured API base.
  *
  * Session create returns root-absolute paths (`/api/tool-gateway/tools`) while
@@ -423,8 +449,7 @@ export async function createToolGatewaySession(
               "",
             ).trim(),
 
-          runId:
-            ctx.runId,
+          runId: resolvePaperclipRunId(ctx),
 
           ...(issueId
             ? { issueId }

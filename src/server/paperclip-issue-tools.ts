@@ -7,7 +7,10 @@ import {
   GATEWAY_CALL_TIMEOUT_MS,
 } from "./http.js";
 import type { StaplerTool } from "./tool-gateway.js";
-import { resolvePaperclipAuthToken } from "./tool-gateway.js";
+import {
+  resolvePaperclipAuthToken,
+  resolvePaperclipRunId,
+} from "./tool-gateway.js";
 
 /**
  * Paperclip’s Tool Gateway `paperclip_self` builtins are read-only
@@ -209,8 +212,10 @@ async function paperclipApiRequest(
     Accept: "application/json",
   });
 
-  if (ctx.runId) {
-    headers.set("X-Paperclip-Run-Id", String(ctx.runId));
+  const runId = resolvePaperclipRunId(ctx);
+
+  if (runId) {
+    headers.set("X-Paperclip-Run-Id", runId);
   }
 
   if (body !== undefined) {
