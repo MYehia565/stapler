@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 1.2.0 — 2026-08-25
+
+- Inter-agent handoff pack: `paperclip_create_issue` (with `assigneeAgentId` / `parentId`), richer `paperclip_update_issue` (`assigneeAgentId`, `blockedByIssueIds`, …), `paperclip_get_issue`, `paperclip_list_my_issues`, `paperclip_list_agents`
+- Prompt protocol: formal handoffs only — structured `[@Name](agent://uuid)` mentions; free-text “Next action: agent” warns and does not wake anyone
+- Wake enrichment: fetch triggering comment body, promote nested `issue.comments`, surface wake payload in the prompt
+
 ## 1.1.0 — 2026-08-25
 
 - Fix cross-issue Paperclip writes: always resolve and send `X-Paperclip-Run-Id` from `ctx.runId`, wake `context.runId`, or `PAPERCLIP_RUN_ID` (same for Tool Gateway session create)

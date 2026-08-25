@@ -118,7 +118,7 @@ Tools, Tool Gateway, issue disposition, MCP prompt, skills, and timeouts are par
 
 - Sandboxed local tools: `list_dir`, `read_file`, `write_file`, `exec_command` (`exec_command` is a full shell; only the working directory is sandboxed)
 - Paperclip Tool Gateway + MCP when host auth is present
-- Issue tools via run JWT: checkout, update, comment
+- Issue tools via run JWT: checkout, update, comment, create (assign), get, list inbox, list agents; wake-comment injection + structured @mention handoff protocol
 - Instructions bundle and ephemeral skills
 
 `extra` means per-slot JSON (`STAPLER_EXTRA_n`) merged into `/chat/completions`, plus the agent `extraBody` field (agent wins on key conflict). Reserved keys (`model`, `messages`, `tools`) cannot be set from extra. Invalid `STAPLER_EXTRA_n` JSON fails Environment test.

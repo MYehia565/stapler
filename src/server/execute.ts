@@ -79,6 +79,7 @@ import {
 
 import type { StaplerTool } from "./tool-gateway.js";
 import { dispatchToolCall } from "./dispatch.js";
+import { enrichPaperclipWakeContext } from "./wake-context.js";
 
 function firstText(value: unknown): string {
   if (typeof value === "string") {
@@ -354,6 +355,20 @@ export async function execute(
       ...loadedInstructions.warnings,
     ];
 
+    const wakeEnrichment = await enrichPaperclipWakeContext(ctx, config);
+    skillWarnings.push(...wakeEnrichment.warnings);
+
+    for (const warning of wakeEnrichment.warnings) {
+      try {
+        await ctx.onLog?.(
+          "stderr",
+          `[stapler] wake context: ${warning}\n`,
+        );
+      } catch {
+        // Ignore log transport failures.
+      }
+    }
+
     prompt = buildSignalCommanderPrompt({
       promptTemplate: asString(
         config.promptTemplate,
@@ -372,11 +387,7 @@ export async function execute(
           unknown
         >,
 
-      context:
-        (ctx.context ?? {}) as Record<
-          string,
-          unknown
-        >,
+      context: wakeEnrichment.context,
 
       runId: resolvePaperclipRunId(ctx),
 

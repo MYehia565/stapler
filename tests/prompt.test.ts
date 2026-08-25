@@ -58,6 +58,7 @@ describe("buildToolAvailabilityMessage", () => {
 
     assert.match(message, /paperclip_update_issue/);
     assert.match(message, /does not stay in_progress/);
+    assert.match(message, /assigneeAgentId/);
   });
 });
 

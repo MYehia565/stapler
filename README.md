@@ -7,7 +7,7 @@
 
 Configure up to **16 providers** with numbered env slots — no code changes, no hardcoded vendor list. Slot ids (`openai`, `groq`, `openrouter`, …) are **derived from each URL hostname** at runtime.
 
-**Version:** 1.1.0 · Spec: [docs/stapler-spec.md](./docs/stapler-spec.md)
+**Version:** 1.2.0 · Spec: [docs/stapler-spec.md](./docs/stapler-spec.md)
 
 ---
 
@@ -20,7 +20,7 @@ Configure up to **16 providers** with numbered env slots — no code changes, no
 - Default **1000** tool rounds with configurable **loop protection** (`off`, `advisory`, `balanced`, `strict`, or custom thresholds)
 - Default run timeout **7200s** (raise further for very long jobs)
 - Paperclip Tool Gateway + MCP when host auth is available
-- Issue tools: `paperclip_checkout_issue`, `paperclip_update_issue`, `paperclip_add_comment`
+- Issue tools: `paperclip_checkout_issue`, `paperclip_update_issue`, `paperclip_add_comment`, `paperclip_create_issue`, `paperclip_get_issue`, `paperclip_list_my_issues`, `paperclip_list_agents`
 
 ---
 

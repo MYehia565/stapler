@@ -101,8 +101,10 @@ export function buildToolAvailabilityMessage(
 
   if (issueTools.length) {
     lines.push(
-      `Paperclip issue disposition tools (also callable functions): ${issueTools.join(", ")}.`,
-      "Use paperclip_checkout_issue when you need ownership. Before ending the run, call paperclip_update_issue with status done, blocked, or in_review and a comment so the issue does not stay in_progress.",
+      `Paperclip issue / handoff tools (also callable functions): ${issueTools.join(", ")}.`,
+      "Use paperclip_checkout_issue when you need ownership.",
+      "To hand work to another agent: paperclip_create_issue with assigneeAgentId (+ parentId), or paperclip_update_issue with assigneeAgentId, or comment with [@Name](agent://uuid) from paperclip_list_agents. Free-text \"Next action: agent-name\" does NOT wake anyone.",
+      "Before ending the run, call paperclip_update_issue with status done, blocked, or in_review (and blockedByIssueIds when blocked) so the issue does not stay in_progress.",
     );
   } else if (paperclipTools.length) {
     lines.push(
@@ -149,24 +151,49 @@ export function buildSignalCommanderPrompt(input: SignalCommanderPromptInput): s
     clean(context.issueID) ||
     clean(issue.id);
 
-  const comments = Array.isArray(context.comments)
+  const issueComments = Array.isArray(issue.comments)
+    ? issue.comments
+    : Array.isArray(issue.recentComments)
+      ? issue.recentComments
+      : [];
+  const commentSource = Array.isArray(context.comments)
     ? context.comments
-        .map((comment) => {
-          if (typeof comment === "string") return comment.trim();
-          if (!comment || typeof comment !== "object") return "";
-          const c = comment as Record<string, unknown>;
-          const author = clean(c.authorName) || clean(c.author) || clean(c.userName);
-          const body = clean(c.body) || clean(c.content) || clean(c.text);
-          return author && body ? `${author}: ${body}` : body;
-        })
-        .filter(Boolean)
-        .join("\n")
-    : "";
+    : issueComments;
+
+  const comments = commentSource
+    .map((comment) => {
+      if (typeof comment === "string") return comment.trim();
+      if (!comment || typeof comment !== "object") return "";
+      const c = comment as Record<string, unknown>;
+      const author =
+        clean(c.authorName) ||
+        clean(c.author) ||
+        clean(c.userName) ||
+        clean(c.agentName);
+      const body = clean(c.body) || clean(c.content) || clean(c.text);
+      return author && body ? `${author}: ${body}` : body;
+    })
+    .filter(Boolean)
+    .join("\n");
 
   const handoff = clean(context.paperclipSessionHandoffMarkdown);
   const workMode = clean(context.issueWorkMode) || clean(context.paperclipIssueWorkMode);
   const wakeReason = clean(context.wakeReason);
   const wakeCommentId = clean(context.wakeCommentId) || clean(context.commentId);
+  const wakeCommentBody =
+    clean(context.wakeCommentBody) ||
+    (() => {
+      const wakeComment = parseObject(context.wakeComment);
+      return (
+        clean(wakeComment.body) ||
+        clean(wakeComment.content) ||
+        clean(wakeComment.text)
+      );
+    })();
+  const wakePayload =
+    context.paperclipWakePayload ??
+    context.wakePayload ??
+    null;
 
   const agentName = clean(agent.name);
   const contextInstructions =
@@ -252,6 +279,7 @@ export function buildSignalCommanderPrompt(input: SignalCommanderPromptInput): s
       "Do not ask the user to restate a task that is already present in the context.",
       "Do not reply with generic readiness questions such as 'what task should I execute?'",
       "Use the issue/task description, comments, wake context, and session handoff as authoritative inputs.",
+      "When a Triggering Wake Comment or Wake Payload is present, treat it as the highest-priority instruction for this heartbeat before generic inbox scanning.",
       "Every name in this run's tools array is a callable OpenAI function: MCP/Composio tools, issue disposition tools, and workspace filesystem tools.",
       "Workspace helpers (list_dir, read_file, write_file, str_replace, grep_search, glob_files, http_fetch, web_search, exec_command, …) cover files, search, and public HTTP. They are not the full tool set when MCP tools are also listed.",
       "If an MCP/Composio function is in the tools array, call it. The declared name may be prefixed (mcp_… or COMPOSIO_…) rather than a short slug like NOTION_SEARCH.",
@@ -265,6 +293,16 @@ export function buildSignalCommanderPrompt(input: SignalCommanderPromptInput): s
       "Return a concise result describing what you actually completed or exactly what blocked execution.",
       ...budget,
     ].join("\n")),
+    section("Inter-Agent Handoff Protocol", [
+      "Paperclip only auto-wakes other agents through formal handoffs — never through prose like \"Next action: signal-commander …\".",
+      "Preferred handoffs:",
+      "1) paperclip_create_issue with title, description, assigneeAgentId, and parentId (and goalId when known).",
+      "2) paperclip_update_issue with assigneeAgentId to reassign the current issue.",
+      "3) paperclip_add_comment / update comment containing a structured mention [@Agent Name](agent://<agent-uuid>).",
+      "4) paperclip_update_issue with blockedByIssueIds when waiting on other issues (unblocks auto-wake the assignee).",
+      "Resolve agent uuids with paperclip_list_agents before mentioning or assigning.",
+      "Asking a human to relay work between agents is a last resort when tools are unavailable — not the default path.",
+    ].join("\n")),
     section("Agent", agentName),
     section("Task", [taskTitle ? `Title: ${taskTitle}` : "", taskDescription].filter(Boolean).join("\n")),
     section("Issue", issueId ? `ID: ${issueId}` : ""),
@@ -274,6 +312,11 @@ export function buildSignalCommanderPrompt(input: SignalCommanderPromptInput): s
       wakeCommentId ? `Comment ID: ${wakeCommentId}` : "",
       Object.keys(wake).length ? stringifySafe(wake) : "",
     ].filter(Boolean).join("\n")),
+    section("Triggering Wake Comment", wakeCommentBody),
+    section(
+      "Wake Payload",
+      wakePayload ? stringifySafe(wakePayload) : "",
+    ),
     section("Previous Session Handoff", handoff),
     section("Comments / Conversation Context", comments),
     section("Agent Instructions", agentInstructions),
@@ -286,7 +329,16 @@ export function buildSignalCommanderPrompt(input: SignalCommanderPromptInput): s
   const prompt = parts.filter(Boolean).join("\n\n").trim();
 
   // Never send an effectively empty/generic execution request.
-  if (!taskTitle && !taskDescription && !issueId && !comments && !handoff && Object.keys(context).length === 0) {
+  if (
+    !taskTitle &&
+    !taskDescription &&
+    !issueId &&
+    !comments &&
+    !handoff &&
+    !wakeCommentBody &&
+    !wakePayload &&
+    Object.keys(context).length === 0
+  ) {
     throw new Error(
       "SignalCommander received no actionable Paperclip task context. Refusing to send a generic prompt."
     );
