@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 1.3.0 — 2026-08-26
+
+- Bundled `skills/stapler/SKILL.md` always injected into every Stapler run (tools + handoff + structured mentions) so all agents learn Stapler without a manual Skills sync
+- Package ships `skills/`; optional company import from GitHub for the Skills UI
+
 ## 1.2.1 — 2026-08-26
 
 - Auto-rewrite bare `@Agent Name` in comments/updates to structured `[@Name](agent://uuid)` using the company agent roster (Paperclip only wakes on structured mentions)

@@ -7,7 +7,7 @@
 
 Configure up to **16 providers** with numbered env slots — no code changes, no hardcoded vendor list. Slot ids (`openai`, `groq`, `openrouter`, …) are **derived from each URL hostname** at runtime.
 
-**Version:** 1.2.1 · Spec: [docs/stapler-spec.md](./docs/stapler-spec.md)
+**Version:** 1.3.0 · Spec: [docs/stapler-spec.md](./docs/stapler-spec.md)
 
 ---
 
@@ -21,6 +21,7 @@ Configure up to **16 providers** with numbered env slots — no code changes, no
 - Default run timeout **7200s** (raise further for very long jobs)
 - Paperclip Tool Gateway + MCP when host auth is available
 - Issue tools: `paperclip_checkout_issue`, `paperclip_update_issue`, `paperclip_add_comment`, `paperclip_create_issue`, `paperclip_get_issue`, `paperclip_list_my_issues`, `paperclip_list_agents`
+- Bundled **stapler** operating skill injected on every run (handoffs + structured mentions)
 
 ---
 
@@ -62,6 +63,21 @@ npm run build
 - **LLM provider** select: pick a slot id from the dropdown (derived from hostname)
 - **Loop protection mode**: `balanced` by default; choose `off`, `advisory`, `balanced`, `strict`, or `custom`
 - Run **Environment test**, then a heartbeat run
+
+### 4. Stapler skill (automatic + optional company import)
+
+Every Stapler heartbeat **always** injects the bundled operating skill from [`skills/stapler/SKILL.md`](./skills/stapler/SKILL.md) (tools, handoffs, structured `@mentions`). You do **not** need to attach it manually for agents to see it.
+
+Optional — import into the company skill library so it also appears in the Paperclip Skills UI:
+
+```bash
+curl -X POST "$PAPERCLIP_API_URL/api/companies/$COMPANY_ID/skills/import" \
+  -H "Authorization: Bearer $PAPERCLIP_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "source": "https://github.com/MYehia565/stapler/tree/main/skills/stapler" }'
+```
+
+Then attach `stapler` (plus your other skills) on each agent via Skills → sync if you want it listed in the UI. Runtime injection still happens even without that attach.
 
 ---
 
