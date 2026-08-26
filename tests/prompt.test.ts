@@ -18,16 +18,18 @@ describe("buildToolAvailabilityMessage", () => {
       paperclipToolNames: ["COMPOSIO_SEARCH_TOOLS", "NOTION_SEARCH"],
     });
 
-    assert.match(message, /MCP \/ Composio \/ governed tools ARE callable/);
+    assert.match(message, /Paperclip Tool Gateway \/ MCP tools ARE callable/);
     assert.match(message, /COMPOSIO_SEARCH_TOOLS/);
     assert.match(message, /NOTION_SEARCH/);
     assert.match(
       message,
       /Workspace filesystem tools \(files\/shell\/search\/network helpers, not MCP\): read_file, write_file\./,
     );
-    assert.match(message, /Do not report MCP tools as unavailable/);
+    assert.match(message, /Do not report Tool Gateway \/ MCP tools as unavailable/);
+    assert.match(message, /any installed MCP connection/);
     assert.match(message, /Loop protection/);
     assert.doesNotMatch(message, /disposition tools are NOT available/);
+    assert.doesNotMatch(message, /Composio/);
   });
 
   it("tells the model to stop rather than shell around a missing gateway", () => {
@@ -39,7 +41,7 @@ describe("buildToolAvailabilityMessage", () => {
 
     assert.match(
       message,
-      /Paperclip governed \/ MCP tools are NOT available in this run/,
+      /Paperclip Tool Gateway \/ MCP tools are NOT available in this run/,
     );
     assert.match(message, /exec_command, curl, wget/);
     assert.match(message, /stop on the first round and report/);
@@ -77,7 +79,7 @@ describe("buildSignalCommanderPrompt", () => {
     assert.match(prompt, /^Hello Scout\n\n## Paperclip Execution Contract/);
     assert.match(
       prompt,
-      /MCP\/Composio tools, issue disposition tools, and workspace filesystem tools/,
+      /Tool Gateway \/ MCP tools, issue disposition tools, and workspace filesystem tools/,
     );
     assert.match(prompt, /## Task\nTitle: Ship fix/);
   });

@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 1.3.1 — 2026-08-26
+
+- Fix auto skill inject: embed Stapler operating skill in the adapter so it loads even when `skills/` is missing from the Paperclip install path; try multiple disk candidates first
+- Generalize Tool Availability / prompt wording from Composio-specific to any Paperclip Tool Gateway / MCP tools present in the run
+
 ## 1.3.0 — 2026-08-26
 
 - Bundled `skills/stapler/SKILL.md` always injected into every Stapler run (tools + handoff + structured mentions) so all agents learn Stapler without a manual Skills sync

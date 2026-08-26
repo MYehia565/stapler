@@ -7,7 +7,7 @@
 
 Configure up to **16 providers** with numbered env slots — no code changes, no hardcoded vendor list. Slot ids (`openai`, `groq`, `openrouter`, …) are **derived from each URL hostname** at runtime.
 
-**Version:** 1.3.0 · Spec: [docs/stapler-spec.md](./docs/stapler-spec.md)
+**Version:** 1.3.1 · Spec: [docs/stapler-spec.md](./docs/stapler-spec.md)
 
 ---
 
@@ -66,7 +66,9 @@ npm run build
 
 ### 4. Stapler skill (automatic + optional company import)
 
-Every Stapler heartbeat **always** injects the bundled operating skill from [`skills/stapler/SKILL.md`](./skills/stapler/SKILL.md) (tools, handoffs, structured `@mentions`). You do **not** need to attach it manually for agents to see it.
+Every Stapler heartbeat **always** injects the bundled operating skill (tools, handoffs, structured `@mentions`). The body is **embedded in the adapter** so it still loads when Paperclip installs only `dist/` and `skills/` is missing on disk. `skills/stapler/SKILL.md` remains the source for optional company-library import.
+
+You do **not** need to attach it manually for agents to see it (manual attach still works and is fine as a backup).
 
 Optional — import into the company skill library so it also appears in the Paperclip Skills UI:
 

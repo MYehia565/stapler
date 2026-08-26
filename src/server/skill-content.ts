@@ -1,10 +1,11 @@
-import { readFile } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 import path from "node:path";
 import type { AdapterSkillContext } from "@paperclipai/adapter-utils";
 import {
   readPaperclipRuntimeSkillEntries,
   resolvePaperclipDesiredSkillNames,
 } from "@paperclipai/adapter-utils/server-utils";
+import { EMBEDDED_STAPLER_SKILL_BODY } from "./bundled-stapler-skill.js";
 import { staplerSkillsModuleDir } from "./skills.js";
 
 const MAX_SKILL_CHARS = 48_000;
@@ -16,6 +17,8 @@ export interface LoadedStaplerSkill {
   key: string;
   runtimeName: string;
   content: string;
+  /** Where the bundled skill body came from (disk or embedded). */
+  source?: "disk" | "embedded";
 }
 
 function packageRootFromModuleDir(moduleDir: string): string {
@@ -23,13 +26,20 @@ function packageRootFromModuleDir(moduleDir: string): string {
   return path.resolve(moduleDir, "..", "..");
 }
 
+export function bundledStaplerSkillCandidates(
+  moduleDir = staplerSkillsModuleDir,
+): string[] {
+  const packageRoot = packageRootFromModuleDir(moduleDir);
+  return [
+    path.join(packageRoot, "skills", "stapler", "SKILL.md"),
+    // Some hosts copy the package with dist at the install root.
+    path.join(moduleDir, "..", "skills", "stapler", "SKILL.md"),
+    path.join(moduleDir, "skills", "stapler", "SKILL.md"),
+  ];
+}
+
 export function bundledStaplerSkillPath(moduleDir = staplerSkillsModuleDir): string {
-  return path.join(
-    packageRootFromModuleDir(moduleDir),
-    "skills",
-    "stapler",
-    "SKILL.md",
-  );
+  return bundledStaplerSkillCandidates(moduleDir)[0]!;
 }
 
 /** Strip YAML frontmatter so the prompt gets the operating body. */
@@ -47,30 +57,51 @@ export function stripSkillFrontmatter(content: string): string {
   return trimmed.slice(end + 4).trim();
 }
 
+function limitSkillContent(body: string): string {
+  return body.length > MAX_SKILL_CHARS
+    ? `${body.slice(0, MAX_SKILL_CHARS)}\n\n[Skill content truncated by Stapler adapter.]`
+    : body;
+}
+
+function isStaplerCompanySkillKey(key: string): boolean {
+  const normalized = key.trim().toLowerCase();
+  return (
+    normalized === BUNDLED_STAPLER_SKILL_KEY ||
+    normalized.endsWith("/stapler") ||
+    normalized.includes("/stapler/") ||
+    normalized.endsWith(":stapler")
+  );
+}
+
 export async function loadBundledStaplerSkill(
   moduleDir = staplerSkillsModuleDir,
-): Promise<LoadedStaplerSkill | null> {
-  const skillFile = bundledStaplerSkillPath(moduleDir);
-  try {
-    const raw = await readFile(skillFile, "utf8");
-    const body = stripSkillFrontmatter(raw);
-    if (!body) {
-      return null;
+): Promise<LoadedStaplerSkill> {
+  for (const skillFile of bundledStaplerSkillCandidates(moduleDir)) {
+    try {
+      await access(skillFile);
+      const raw = await readFile(skillFile, "utf8");
+      const body = stripSkillFrontmatter(raw);
+      if (!body) {
+        continue;
+      }
+
+      return {
+        key: BUNDLED_STAPLER_SKILL_KEY,
+        runtimeName: BUNDLED_STAPLER_SKILL_KEY,
+        content: limitSkillContent(body),
+        source: "disk",
+      };
+    } catch {
+      // try next candidate
     }
-
-    const limited =
-      body.length > MAX_SKILL_CHARS
-        ? `${body.slice(0, MAX_SKILL_CHARS)}\n\n[Skill content truncated by Stapler adapter.]`
-        : body;
-
-    return {
-      key: BUNDLED_STAPLER_SKILL_KEY,
-      runtimeName: BUNDLED_STAPLER_SKILL_KEY,
-      content: limited,
-    };
-  } catch {
-    return null;
   }
+
+  return {
+    key: BUNDLED_STAPLER_SKILL_KEY,
+    runtimeName: BUNDLED_STAPLER_SKILL_KEY,
+    content: limitSkillContent(EMBEDDED_STAPLER_SKILL_BODY.trim()),
+    source: "embedded",
+  };
 }
 
 export async function loadDesiredStaplerSkills(
@@ -83,25 +114,22 @@ export async function loadDesiredStaplerSkills(
   const warnings: string[] = [];
   let total = 0;
 
-  // Always inject the adapter-bundled Stapler operating skill first so every
-  // Stapler agent knows tools + handoff rules without a manual Skills sync.
+  // Always inject the Stapler operating skill first. Prefer disk SKILL.md when
+  // present; otherwise use the embedded body so Paperclip installs that only
+  // ship `dist/` still get the skill.
   const bundled = await loadBundledStaplerSkill();
-  if (bundled) {
-    skills.push(bundled);
-    total += bundled.content.length;
-  } else {
+  skills.push(bundled);
+  total += bundled.content.length;
+
+  if (bundled.source === "embedded") {
     warnings.push(
-      `Bundled Stapler skill missing at ${bundledStaplerSkillPath()}. Agents will rely on the built-in prompt handoff section only.`,
+      `Bundled Stapler skill loaded from embedded fallback (disk SKILL.md not found near ${bundledStaplerSkillPath()}).`,
     );
   }
 
   for (const key of desired) {
-    // Skip company copies of the same stapler skill to avoid duplicate context.
-    if (
-      key === BUNDLED_STAPLER_SKILL_KEY ||
-      key.endsWith("/stapler") ||
-      key.includes("/stapler/")
-    ) {
+    // Skip company copies only when the bundled skill already covers it.
+    if (isStaplerCompanySkillKey(key)) {
       continue;
     }
 
@@ -130,9 +158,7 @@ export async function loadDesiredStaplerSkills(
       continue;
     }
 
-    const limited = trimmed.length > MAX_SKILL_CHARS
-      ? `${trimmed.slice(0, MAX_SKILL_CHARS)}\n\n[Skill content truncated by Stapler adapter.]`
-      : trimmed;
+    const limited = limitSkillContent(trimmed);
 
     if (total + limited.length > MAX_TOTAL_SKILL_CHARS) {
       warnings.push(

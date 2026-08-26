@@ -530,7 +530,7 @@ export async function execute(
     }
   }
 
-  // MCP first so providers that truncate the tools array keep Composio.
+  // Tool Gateway / MCP first so providers that truncate the tools array keep them.
   const tools: StaplerTool[] = [
     ...gatewayTools.tools,
     ...paperclipIssueTools,

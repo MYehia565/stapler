@@ -52,9 +52,9 @@ export interface ToolAvailabilityInput {
  * shell-probing for an alternative route to Paperclip data; told plainly that
  * the capability is absent, it reports the blocker instead.
  *
- * Lead with MCP when present. If "Workspace tools" is the first heading,
- * models treat it as the only callable namespace and ignore Composio even
- * when those functions are in the request.
+ * Lead with Tool Gateway / MCP tools when present. If "Workspace tools" is the
+ * first heading, models treat it as the only callable namespace and ignore
+ * gateway tools even when those functions are in the request.
  */
 export function buildToolAvailabilityMessage(
   input: ToolAvailabilityInput,
@@ -75,13 +75,13 @@ export function buildToolAvailabilityMessage(
         : paperclipTools.join(", ");
 
     lines.push(
-      `MCP / Composio / governed tools ARE callable OpenAI functions in this run (${paperclipTools.length}): ${listed}.`,
-      "Call them by the exact function name in the tools array (often prefixed, e.g. COMPOSIO_SEARCH_TOOLS or a name ending in NOTION_SEARCH). They are not limited to the workspace helpers.",
-      "Do not report MCP tools as unavailable when this list is non-empty.",
+      `Paperclip Tool Gateway / MCP tools ARE callable OpenAI functions in this run (${paperclipTools.length}): ${listed}.`,
+      "These may come from any installed MCP connection or governed Paperclip tool — not one vendor. Call each by the exact function name in the tools array (names are often prefixed, e.g. mcp_… or a provider prefix).",
+      "Do not report Tool Gateway / MCP tools as unavailable when this list is non-empty.",
     );
   } else {
     lines.push(
-      "Paperclip governed / MCP tools are NOT available in this run.",
+      "Paperclip Tool Gateway / MCP tools are NOT available in this run.",
       "Do not attempt to reach the Paperclip API through exec_command, curl, wget, ssh, or any other HTTP client.",
       "Do not search the workspace for an alternative route to that data.",
     );
@@ -280,14 +280,14 @@ export function buildSignalCommanderPrompt(input: SignalCommanderPromptInput): s
       "Do not reply with generic readiness questions such as 'what task should I execute?'",
       "Use the issue/task description, comments, wake context, and session handoff as authoritative inputs.",
       "When a Triggering Wake Comment or Wake Payload is present, treat it as the highest-priority instruction for this heartbeat before generic inbox scanning.",
-      "Every name in this run's tools array is a callable OpenAI function: MCP/Composio tools, issue disposition tools, and workspace filesystem tools.",
-      "Workspace helpers (list_dir, read_file, write_file, str_replace, grep_search, glob_files, http_fetch, web_search, exec_command, …) cover files, search, and public HTTP. They are not the full tool set when MCP tools are also listed.",
-      "If an MCP/Composio function is in the tools array, call it. The declared name may be prefixed (mcp_… or COMPOSIO_…) rather than a short slug like NOTION_SEARCH.",
+      "Every name in this run's tools array is a callable OpenAI function: Tool Gateway / MCP tools, issue disposition tools, and workspace filesystem tools.",
+      "Workspace helpers (list_dir, read_file, write_file, str_replace, grep_search, glob_files, http_fetch, web_search, exec_command, …) cover files, search, and public HTTP. They are not the full tool set when Tool Gateway / MCP tools are also listed.",
+      "If a Tool Gateway / MCP function is in the tools array, call it. Names may be prefixed (mcp_… or a connection/provider prefix) rather than a short slug.",
       "Paperclip company data may be available through governed tools. Use those tools instead of guessing.",
       "When paperclip_update_issue is available, set a final issue disposition before ending the run (done, blocked, or in_review with a comment).",
       "Tool calls are real OpenAI function calls. Never emit XML, DSML, <tool_calls>, <invoke>, or a textual exec_command block as a substitute for calling a tool.",
       "Treat tool results as the current source of truth.",
-      "Only report a required tool as unavailable when Tool Availability says MCP / governed tools are NOT available. If that list is non-empty, execute with the declared names.",
+      "Only report a required tool as unavailable when Tool Availability says Tool Gateway / MCP tools are NOT available. If that list is non-empty, execute with the declared names.",
       "If execution is genuinely blocked, state the exact missing information and why it blocks the task.",
       "Do not invent requirements, facts, files, permissions, or completed work.",
       "Return a concise result describing what you actually completed or exactly what blocked execution.",

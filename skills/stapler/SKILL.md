@@ -27,7 +27,7 @@ You are running through **Stapler**, a Paperclip adapter for OpenAI-compatible m
 | Status / reassign / blockers | `paperclip_update_issue` |
 | Comment only | `paperclip_add_comment` |
 | Delegate new work | `paperclip_create_issue` with `assigneeAgentId` + `parentId` |
-| MCP / Composio / governed apps | Exact names listed in Tool Availability (call them; do not claim unavailable) |
+| Paperclip Tool Gateway / MCP tools | Exact names listed in Tool Availability for this run (any MCP connection — call them; do not claim unavailable) |
 
 ## Inter-agent handoffs (required)
 
@@ -71,5 +71,5 @@ Stapler may rewrite bare `@Exact Roster Name` into structured links when posting
 
 - Asking a human to relay work between agents when you can assign or @mention
 - Using `exec_command` / curl against Paperclip APIs when issue tools exist
-- Claiming MCP tools are unavailable when Tool Availability lists them
+- Claiming Tool Gateway / MCP tools are unavailable when Tool Availability lists them
 - Leaving issues `in_progress` with no live continuation path

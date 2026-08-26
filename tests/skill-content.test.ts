@@ -27,16 +27,27 @@ describe("bundled Stapler skill", () => {
     assert.doesNotMatch(body, /^---/);
   });
 
-  it("resolves and loads skills/stapler/SKILL.md from the package", async () => {
+  it("loads skills/stapler/SKILL.md from disk when present", async () => {
     const skillPath = bundledStaplerSkillPath(repoServerDir);
     assert.match(skillPath.replace(/\\/g, "/"), /skills\/stapler\/SKILL\.md$/);
 
     const skill = await loadBundledStaplerSkill(repoServerDir);
-    assert.ok(skill);
-    assert.equal(skill!.key, BUNDLED_STAPLER_SKILL_KEY);
-    assert.match(skill!.content, /Inter-agent handoffs/);
-    assert.match(skill!.content, /agent:\/\/<agent-uuid>/);
-    assert.match(skill!.content, /paperclip_list_agents/);
-    assert.doesNotMatch(skill!.content, /^name: stapler/m);
+    assert.equal(skill.key, BUNDLED_STAPLER_SKILL_KEY);
+    assert.equal(skill.source, "disk");
+    assert.match(skill.content, /Inter-agent handoffs/);
+    assert.match(skill.content, /agent:\/\/<agent-uuid>/);
+    assert.match(skill.content, /paperclip_list_agents/);
+    assert.match(skill.content, /any MCP connection/);
+    assert.doesNotMatch(skill.content, /^name: stapler/m);
+  });
+
+  it("falls back to embedded body when disk SKILL.md is missing", async () => {
+    const skill = await loadBundledStaplerSkill(
+      path.join(path.dirname(fileURLToPath(import.meta.url)), "missing-server"),
+    );
+    assert.equal(skill.key, BUNDLED_STAPLER_SKILL_KEY);
+    assert.equal(skill.source, "embedded");
+    assert.match(skill.content, /Stapler operating skill/);
+    assert.match(skill.content, /Tool Gateway \/ MCP tools/);
   });
 });
