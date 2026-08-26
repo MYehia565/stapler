@@ -1,6 +1,12 @@
 import type { AdapterExecutionContext } from "@paperclipai/adapter-utils";
 import { asString, parseObject } from "@paperclipai/adapter-utils/server-utils";
 
+import {
+  agentsFromListPayload,
+  formatMentionRewriteWarning,
+  rewriteBareAgentMentions,
+  type MentionRewriteResult,
+} from "./agent-mentions.js";
 import { DEFAULT_PAPERCLIP_API_URL } from "./config.js";
 import {
   fetchWithTimeout,
@@ -294,7 +300,7 @@ export function listPaperclipIssueTools(): StaplerTool[] {
             comment: {
               type: "string",
               description:
-                "Markdown comment. For waking another agent without reassignment, include a structured mention [@Name](agent://uuid).",
+                "Markdown comment. Bare @Agent Name is auto-rewritten to [@Name](agent://uuid) when the name matches the company roster. Prefer structured mentions.",
             },
             assigneeAgentId: {
               type: "string",
@@ -331,7 +337,7 @@ export function listPaperclipIssueTools(): StaplerTool[] {
       function: {
         name: "paperclip_add_comment",
         description:
-          "Post a comment on a Paperclip issue (POST /api/issues/{issueId}/comments). Free-text \"Next action: agent-name\" does NOT wake anyone. To wake another agent, include a structured mention: [@Agent Name](agent://<agent-uuid>). Resolve uuids via paperclip_list_agents.",
+          "Post a comment on a Paperclip issue (POST /api/issues/{issueId}/comments). Bare @Agent Name does NOT wake anyone — Stapler rewrites known roster names to [@Name](agent://uuid). Prefer writing structured mentions yourself via paperclip_list_agents.",
         parameters: {
           type: "object",
           properties: {
@@ -452,6 +458,81 @@ export async function paperclipApiRequest(
     ok: true,
     status: response.status,
     data,
+  };
+}
+
+function mergeToolWarnings(
+  result: unknown,
+  ...warnings: Array<string | undefined>
+): unknown {
+  const parts = warnings.filter(Boolean) as string[];
+  if (!parts.length) {
+    return result;
+  }
+
+  if (!result || typeof result !== "object") {
+    return result;
+  }
+
+  const existing = cleanWarning((result as { warning?: unknown }).warning);
+  const warning = [existing, ...parts].filter(Boolean).join(" ");
+  return {
+    ...(result as object),
+    warning,
+  };
+}
+
+function cleanWarning(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+async function rewriteCommentBodyWithRoster(
+  ctx: AdapterExecutionContext,
+  config: Record<string, unknown>,
+  companyId: string,
+  body: string,
+): Promise<{ body: string; rewrite?: MentionRewriteResult; warning?: string }> {
+  if (!body.includes("@") || !companyId) {
+    return { body };
+  }
+
+  // Already fully structured and no bare @ left → skip roster fetch.
+  if (
+    /\[@[^\]]*\]\(agent:\/\/[^)]+\)/.test(body) &&
+    !/(^|[\s([{"'])@[A-Za-z]/.test(body.replace(/\[@[^\]]*\]\(agent:\/\/[^)]+\)/g, ""))
+  ) {
+    return { body };
+  }
+
+  const list = (await paperclipApiRequest(
+    ctx,
+    config,
+    "GET",
+    `companies/${encodeURIComponent(companyId)}/agents`,
+  )) as { ok?: boolean; data?: unknown; error?: string };
+
+  if (!list.ok) {
+    return {
+      body,
+      warning:
+        `Could not load company agents to rewrite @mentions (${list.error || "unknown error"}). Bare @Name will not wake anyone — use [@Name](agent://uuid).`,
+    };
+  }
+
+  const agents = agentsFromListPayload(list.data);
+  if (!agents.length) {
+    return {
+      body,
+      warning:
+        "Company agent roster was empty; bare @mentions were not rewritten and will not wake anyone.",
+    };
+  }
+
+  const rewrite = rewriteBareAgentMentions(body, agents);
+  return {
+    body: rewrite.body,
+    rewrite,
+    warning: formatMentionRewriteWarning(rewrite),
   };
 }
 
@@ -750,13 +831,27 @@ export async function callPaperclipIssueTool(
       return { ok: false, error };
     }
 
-    return paperclipApiRequest(
+    let mentionWarning: string | undefined;
+    if (typeof payload.comment === "string" && payload.comment.includes("@")) {
+      const rewritten = await rewriteCommentBodyWithRoster(
+        ctx,
+        config,
+        companyId,
+        payload.comment,
+      );
+      payload.comment = rewritten.body;
+      mentionWarning = rewritten.warning;
+    }
+
+    const result = await paperclipApiRequest(
       ctx,
       config,
       "PATCH",
       `issues/${encodeURIComponent(issueId)}`,
       payload,
     );
+
+    return mergeToolWarnings(result, mentionWarning);
   }
 
   const body = firstString(args, ["body", "comment", "message"]);
@@ -768,27 +863,44 @@ export async function callPaperclipIssueTool(
     };
   }
 
-  const hasStructuredMention = /\[@[^\]]+\]\(agent:\/\/[^)]+\)/.test(body);
-  const looksLikeProseHandoff =
-    /\bnext action\b/i.test(body) &&
-    !hasStructuredMention &&
-    !/\bagent:\/\//i.test(body);
+  const rewritten = await rewriteCommentBodyWithRoster(
+    ctx,
+    config,
+    companyId,
+    body,
+  );
 
   const result = await paperclipApiRequest(
     ctx,
     config,
     "POST",
     `issues/${encodeURIComponent(issueId)}/comments`,
-    { body },
+    { body: rewritten.body },
   );
 
-  if ((result as { ok?: boolean }).ok && looksLikeProseHandoff) {
-    return {
-      ...(result as object),
-      warning:
-        "Comment posted, but free-text \"Next action\" does not wake another agent. Use paperclip_create_issue with assigneeAgentId, or include [@Agent Name](agent://uuid) from paperclip_list_agents.",
-    };
-  }
+  const looksLikeProseHandoff =
+    /\bnext action\b/i.test(rewritten.body) &&
+    !/\[@[^\]]*\]\(agent:\/\/[^)]+\)/.test(rewritten.body);
 
-  return result;
+  const proseWarning = looksLikeProseHandoff
+    ? 'Comment posted, but free-text "Next action" without structured [@Name](agent://uuid) mentions does not wake another agent. Prefer paperclip_create_issue with assigneeAgentId.'
+    : undefined;
+
+  return mergeToolWarnings(
+    {
+      ...(result as object),
+      ...(rewritten.rewrite?.resolved.length
+        ? {
+            mentionRewrite: {
+              resolved: rewritten.rewrite.resolved,
+              unresolved: rewritten.rewrite.unresolved,
+              ambiguous: rewritten.rewrite.ambiguous,
+              body: rewritten.body,
+            },
+          }
+        : {}),
+    },
+    rewritten.warning,
+    proseWarning,
+  );
 }

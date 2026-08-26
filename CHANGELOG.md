@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 1.2.1 — 2026-08-26
+
+- Auto-rewrite bare `@Agent Name` in comments/updates to structured `[@Name](agent://uuid)` using the company agent roster (Paperclip only wakes on structured mentions)
+- Harden handoff prompt: bare `@Name` does not wake anyone
+
 ## 1.2.0 — 2026-08-25
 
 - Inter-agent handoff pack: `paperclip_create_issue` (with `assigneeAgentId` / `parentId`), richer `paperclip_update_issue` (`assigneeAgentId`, `blockedByIssueIds`, …), `paperclip_get_issue`, `paperclip_list_my_issues`, `paperclip_list_agents`

@@ -205,15 +205,76 @@ describe("paperclip issue disposition tools", () => {
     assert.match(seenBody, /"blockedByIssueIds":\["dep-1"\]/);
   });
 
-  it("warns on prose Next action comments without structured mention", async () => {
-    globalThis.fetch = async () =>
-      new Response(JSON.stringify({ id: "c1" }), { status: 201 });
+  it("rewrites bare @Agent Name to structured mentions before posting", async () => {
+    const calls: Array<{ url: string; body: string }> = [];
+
+    globalThis.fetch = async (input, init) => {
+      const url = String(input);
+      const body = String(init?.body ?? "");
+      calls.push({ url, body });
+
+      if (url.includes("/agents") && !url.includes("/comments")) {
+        return new Response(
+          JSON.stringify([
+            { id: "id-ps", name: "Product Strategist" },
+            { id: "id-ga", name: "Growth Analyst" },
+          ]),
+          { status: 200 },
+        );
+      }
+
+      return new Response(JSON.stringify({ id: "c1" }), { status: 201 });
+    };
 
     const result = (await callPaperclipIssueTool(
       {
         runId: "run-1",
         authToken: "jwt",
-        agent: { id: "agent-1" },
+        agent: { id: "agent-1", companyId: "co-1" },
+        context: { issueId: "issue-1" },
+        config: {},
+        runtime: {},
+      } as any,
+      { paperclipApiUrl: "https://agent.signalpost.net/api" },
+      "paperclip_add_comment",
+      {
+        body: "Please take ICP → @Product Strategist. Tracking → @Growth Analyst.",
+      },
+    )) as {
+      ok: boolean;
+      warning?: string;
+      mentionRewrite?: { body: string; resolved: Array<{ id: string }> };
+    };
+
+    assert.equal(result.ok, true);
+    assert.equal(calls.length, 2);
+    assert.match(calls[0]!.url, /companies\/co-1\/agents$/);
+    assert.match(
+      calls[1]!.body,
+      /\[@Product Strategist\]\(agent:\/\/id-ps\)/,
+    );
+    assert.match(
+      calls[1]!.body,
+      /\[@Growth Analyst\]\(agent:\/\/id-ga\)/,
+    );
+    assert.match(String(result.warning), /Rewrote 2 bare @mention/);
+    assert.equal(result.mentionRewrite?.resolved.length, 2);
+  });
+
+  it("warns on prose Next action comments without structured mention", async () => {
+    globalThis.fetch = async (input) => {
+      const url = String(input);
+      if (url.includes("/agents")) {
+        return new Response(JSON.stringify([]), { status: 200 });
+      }
+      return new Response(JSON.stringify({ id: "c1" }), { status: 201 });
+    };
+
+    const result = (await callPaperclipIssueTool(
+      {
+        runId: "run-1",
+        authToken: "jwt",
+        agent: { id: "agent-1", companyId: "co-1" },
         context: { issueId: "issue-1" },
         config: {},
         runtime: {},
@@ -237,7 +298,7 @@ describe("paperclip issue disposition tools", () => {
       {
         runId: "run-1",
         authToken: "jwt",
-        agent: { id: "agent-1" },
+        agent: { id: "agent-1", companyId: "co-1" },
         context: { issueId: "issue-1" },
         config: {},
         runtime: {},
@@ -501,6 +562,7 @@ describe("handoff prompt guidance", () => {
     assert.match(prompt, /Inter-Agent Handoff Protocol/);
     assert.match(prompt, /assigneeAgentId/);
     assert.match(prompt, /agent:\/\/<agent-uuid>/);
+    assert.match(prompt, /Bare `@Product Strategist` does NOT wake/);
     assert.match(prompt, /## Triggering Wake Comment/);
     assert.match(prompt, /approve S2\/S3\/S1/);
   });
@@ -517,6 +579,6 @@ describe("handoff prompt guidance", () => {
     });
 
     assert.match(message, /paperclip_create_issue/);
-    assert.match(message, /Free-text "Next action: agent-name" does NOT wake/);
+    assert.match(message, /Bare `@Name` text does NOT wake/);
   });
 });

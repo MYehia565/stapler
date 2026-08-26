@@ -1,6 +1,6 @@
 {
   "name": "stapler",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Universal OpenAI-compatible Paperclip adapter with multi-provider STAPLER_* env slots",
   "license": "MIT",
   "type": "module",

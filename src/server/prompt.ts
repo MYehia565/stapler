@@ -103,7 +103,7 @@ export function buildToolAvailabilityMessage(
     lines.push(
       `Paperclip issue / handoff tools (also callable functions): ${issueTools.join(", ")}.`,
       "Use paperclip_checkout_issue when you need ownership.",
-      "To hand work to another agent: paperclip_create_issue with assigneeAgentId (+ parentId), or paperclip_update_issue with assigneeAgentId, or comment with [@Name](agent://uuid) from paperclip_list_agents. Free-text \"Next action: agent-name\" does NOT wake anyone.",
+      "To hand work to another agent: paperclip_create_issue with assigneeAgentId (+ parentId), or paperclip_update_issue with assigneeAgentId, or comment with [@Name](agent://uuid) from paperclip_list_agents. Bare `@Name` text does NOT wake anyone (Stapler rewrites known roster names when posting).",
       "Before ending the run, call paperclip_update_issue with status done, blocked, or in_review (and blockedByIssueIds when blocked) so the issue does not stay in_progress.",
     );
   } else if (paperclipTools.length) {
@@ -294,11 +294,12 @@ export function buildSignalCommanderPrompt(input: SignalCommanderPromptInput): s
       ...budget,
     ].join("\n")),
     section("Inter-Agent Handoff Protocol", [
-      "Paperclip only auto-wakes other agents through formal handoffs — never through prose like \"Next action: signal-commander …\".",
+      "Paperclip only auto-wakes other agents through formal handoffs — never through prose like \"Next action: signal-commander …\" and never through bare @Agent Name text.",
+      "Bare `@Product Strategist` does NOT wake that agent. The only comment mention format that wakes is: [@Agent Name](agent://<agent-uuid>).",
       "Preferred handoffs:",
       "1) paperclip_create_issue with title, description, assigneeAgentId, and parentId (and goalId when known).",
       "2) paperclip_update_issue with assigneeAgentId to reassign the current issue.",
-      "3) paperclip_add_comment / update comment containing a structured mention [@Agent Name](agent://<agent-uuid>).",
+      "3) paperclip_add_comment containing structured mentions [@Agent Name](agent://<agent-uuid>). Stapler will try to rewrite bare @roster-name mentions, but write the structured form yourself whenever possible.",
       "4) paperclip_update_issue with blockedByIssueIds when waiting on other issues (unblocks auto-wake the assignee).",
       "Resolve agent uuids with paperclip_list_agents before mentioning or assigning.",
       "Asking a human to relay work between agents is a last resort when tools are unavailable — not the default path.",

@@ -7,7 +7,7 @@
 
 Configure up to **16 providers** with numbered env slots — no code changes, no hardcoded vendor list. Slot ids (`openai`, `groq`, `openrouter`, …) are **derived from each URL hostname** at runtime.
 
-**Version:** 1.2.0 · Spec: [docs/stapler-spec.md](./docs/stapler-spec.md)
+**Version:** 1.2.1 · Spec: [docs/stapler-spec.md](./docs/stapler-spec.md)
 
 ---
 
