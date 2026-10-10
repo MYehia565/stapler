@@ -12,6 +12,8 @@ Paperclip already supports bring-your-own credentials for its built-in provider 
 
 With up to **16 provider slots**, a combined model catalogue, and requests sent directly to the selected endpoint, Stapler keeps provider choice in your hands. Your provider account and billing relationship remain yours; Stapler is an adapter, not a hosted inference service.
 
+![Stapler architecture: Paperclip agents connect through Stapler to operator-configured OpenAI-compatible endpoints](./docs/assets/stapler-architecture.svg)
+
 **Current version:** 1.3.1 · [Adapter specification](./docs/stapler-spec.md) · [Changelog](./CHANGELOG.md) · [Report a bug](https://github.com/MYehia565/stapler/issues/new?template=bug_report.md)
 
 ---
