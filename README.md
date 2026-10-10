@@ -2,21 +2,35 @@
 
 [![CI](https://github.com/MYehia565/stapler/actions/workflows/ci.yml/badge.svg)](https://github.com/MYehia565/stapler/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Node.js 20+](https://img.shields.io/badge/Node.js-20%2B-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 
-**Stapler** is a universal [Paperclip](https://github.com/paperclipai/paperclip) external adapter for **OpenAI-compatible** LLM APIs (`GET /v1/models`, `POST /v1/chat/completions`).
+**Bring your own keys. Choose your models. Keep Paperclip in control.**
 
-Configure up to **16 providers** with numbered env slots — no code changes, no hardcoded vendor list. Slot ids (`openai`, `groq`, `openrouter`, …) are **derived from each URL hostname** at runtime.
+Stapler is an open-source external adapter that gives [Paperclip](https://github.com/paperclipai/paperclip) agents one consistent way to use multiple **OpenAI-compatible LLM providers**. Configure your own provider endpoints and API keys, then select a provider and model for each agent — without hard-coding vendors into the adapter or routing requests through a Stapler-operated service.
 
-**Version:** 1.3.1 · Spec: [docs/stapler-spec.md](./docs/stapler-spec.md)
+Stapler supports up to **16 provider slots**, discovers models across configured endpoints, and passes requests directly to the selected provider endpoint. Your provider account and billing relationship remain yours.
+
+> **The BYOK angle:** Paperclip orchestrates your agents; Stapler lets you bring compatible model providers and keys to those agents through one adapter. It is not a hosted model service and does not provide free inference.
+
+**Current version:** 1.3.1 · [Adapter specification](./docs/stapler-spec.md) · [Changelog](./CHANGELOG.md) · [Report a bug](https://github.com/MYehia565/stapler/issues/new?template=bug_report.md)
 
 ---
+
+## Why Stapler
+
+- **Bring your own API keys (BYOK):** configure provider credentials you control on the Paperclip host.
+- **One adapter, many providers:** up to **16** OpenAI-compatible endpoint/key pairs.
+- **Discover models across providers:** Models / Detect / Refresh can build a combined catalogue; model IDs are provider-prefixed when needed (for example, `openai::gpt-4o`).
+- **No Stapler-hosted inference layer:** requests go from the adapter to the configured endpoint. Provider usage and charges are governed by that provider.
+- **No hard-coded vendor allowlist:** compatible endpoints can be configured without adding a vendor to Stapler's code.
+- **Paperclip-native workflow:** supports the adapter contract, Tool Gateway / MCP where host auth is available, and Paperclip issue tools.
 
 ## Features
 
 - Up to **16 provider slots** via `STAPLER_WEB_URL_n` + `STAPLER_API_KEY_n`
-- **Union model discovery** — Models / Detect / Refresh list every configured slot
-- Prefixed model ids when multiple slots exist (`openai::gpt-4o`, `groq::llama-3.3-70b`)
-- Sandboxed workspace tools: `list_dir`, `read_file`, `write_file`, `str_replace`, `delete_file`, `move_file`, `grep_search`, `glob_files`, `http_fetch`, `web_search`, `exec_command` (full host shell; cwd stays in the workspace)
+- Union model discovery across configured slots
+- Provider-prefixed model IDs when multiple slots exist (`openai::gpt-4o`, `groq::llama-3.3-70b`)
+- Workspace file/search tools: `list_dir`, `read_file`, `write_file`, `str_replace`, `delete_file`, `move_file`, `grep_search`, `glob_files`, `http_fetch`, `web_search`, and `exec_command`
 - Default **1000** tool rounds with configurable **loop protection** (`off`, `advisory`, `balanced`, `strict`, or custom thresholds)
 - Default run timeout **7200s** (raise further for very long jobs)
 - Paperclip Tool Gateway + MCP when host auth is available
@@ -27,7 +41,9 @@ Configure up to **16 providers** with numbered env slots — no code changes, no
 
 ## Quick start
 
-### 1. Server env (Paperclip host)
+You need a running Paperclip instance, Node.js 20 or newer, and an API key for at least one provider with an OpenAI-compatible API. Stapler is an adapter, not a model host; provider usage may incur charges.
+
+### 1. Configure provider keys on the Paperclip host
 
 Restart Paperclip after setting these on the **server process**:
 
@@ -45,9 +61,9 @@ STAPLER_PROVIDER=groq
 STAPLER_MODEL=llama-3.3-70b-versatile
 ```
 
-Bind keys through Paperclip **Secret access** using the same variable names.
+Set these variables in the Paperclip server environment or bind them through Paperclip **Secret access** using the same variable names. Do not commit keys, put them in screenshots, or paste them into issues.
 
-### 2. Install the adapter
+### 2. Build and install the adapter
 
 ```bash
 git clone https://github.com/MYehia565/stapler.git
@@ -57,7 +73,7 @@ npm run build
 # Install into Paperclip via Adapter Manager or POST /api/adapters/install
 ```
 
-### 3. Assign agents
+### 3. Configure an agent
 
 - Adapter type: **`stapler`**
 - **LLM provider** select: pick a slot id from the dropdown (derived from hostname)
@@ -107,7 +123,7 @@ Stapler now treats repeated **same calls with the same results** as a stronger l
 
 ---
 
-## Popular provider examples
+## Compatible provider examples
 
 Stapler works with any host that exposes OpenAI-compatible `/models` and `/chat/completions`. The **slot id** column is what appears in the UI and in prefixed model ids — it is extracted from the URL hostname (see [How slot ids work](#how-slot-ids-work)).
 
@@ -197,31 +213,31 @@ Aliases accepted: `STAPLER_API_KEY1` (no underscore before number).
 
 ---
 
+## Security and execution boundaries
+
+- Configure API keys through the Paperclip host environment or its secret-management flow. Never commit secrets.
+- Stapler sends requests to the provider URLs you configure. Only use endpoints you trust, and review provider retention and data policies.
+- **Important:** workspace file tools operate relative to the configured workspace, but `exec_command` runs a shell command. Treat it as privileged code execution on the Paperclip host; the working directory alone is not an operating-system security sandbox. Run Paperclip with least privilege and isolate it appropriately.
+- Stapler does not automatically fail over between provider slots. A run uses the selected slot; keep credentials and endpoint configuration aligned.
+
 ## Development
 
 ```bash
 npm ci
 npm run typecheck
-npm test          # 100+ unit tests
+npm test
 npm run build
 npm run verify:e2e
+npm run verify:runtime
 ```
 
-See [CONTRIBUTING.md](./CONTRIBUTING.md), [VERIFICATION.md](./VERIFICATION.md), and [docs/e2e-checklist.md](./docs/e2e-checklist.md).
+See [CONTRIBUTING.md](./CONTRIBUTING.md), [VERIFICATION.md](./VERIFICATION.md), [docs/e2e-checklist.md](./docs/e2e-checklist.md), and [CHANGELOG.md](./CHANGELOG.md).
 
 ---
 
-## Publishing this repo
+## Support and contributions
 
-After creating `github.com/MYehia565/stapler` (or your org):
-
-1. Update `repository` in [package.json](./package.json) if the org/name differs
-2. `git add . && git commit -m "Initial public release: Stapler 1.0.0"`
-3. `git remote add origin git@github.com:MYehia565/stapler.git`
-4. `git push -u origin main`
-5. Optional: tag `v1.0.0` for a GitHub release
-
-Install in Paperclip from the published path or git URL.
+Bug reports and focused feature requests are welcome through [GitHub Issues](https://github.com/MYehia565/stapler/issues). Before opening an issue, check existing reports and never include API keys, personal data, or unredacted logs. Pull requests should include tests for behavior changes; see [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 ---
 
