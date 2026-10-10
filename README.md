@@ -4,26 +4,30 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Node.js 20+](https://img.shields.io/badge/Node.js-20%2B-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 
-**Bring your own keys. Choose your models. Keep Paperclip in control.**
+**Bring any OpenAI-compatible provider to Paperclip. Your keys. Your models. Your infrastructure.**
 
-Stapler is an open-source external adapter that gives [Paperclip](https://github.com/paperclipai/paperclip) agents one consistent way to use multiple **OpenAI-compatible LLM providers**. Configure your own provider endpoints and API keys, then select a provider and model for each agent — without hard-coding vendors into the adapter or routing requests through a Stapler-operated service.
+[Paperclip](https://github.com/paperclipai/paperclip) gives teams an agent orchestration layer. Stapler expands the provider choices available to those agents: configure your own OpenAI-compatible API endpoints and credentials, then select the provider and model you want each agent to use.
 
-Stapler supports up to **16 provider slots**, discovers models across configured endpoints, and passes requests directly to the selected provider endpoint. Your provider account and billing relationship remain yours.
+Paperclip already supports bring-your-own credentials for its built-in provider integrations. **Stapler takes that flexibility further** by letting operators connect compatible endpoints without waiting for each provider to become a dedicated built-in integration.
 
-> **The BYOK angle:** Paperclip orchestrates your agents; Stapler lets you bring compatible model providers and keys to those agents through one adapter. It is not a hosted model service and does not provide free inference.
+With up to **16 provider slots**, a combined model catalogue, and requests sent directly to the selected endpoint, Stapler keeps provider choice in your hands. Your provider account and billing relationship remain yours; Stapler is an adapter, not a hosted inference service.
 
 **Current version:** 1.3.1 · [Adapter specification](./docs/stapler-spec.md) · [Changelog](./CHANGELOG.md) · [Report a bug](https://github.com/MYehia565/stapler/issues/new?template=bug_report.md)
 
 ---
 
-## Why Stapler
+## Why Stapler exists
 
-- **Bring your own API keys (BYOK):** configure provider credentials you control on the Paperclip host.
-- **One adapter, many providers:** up to **16** OpenAI-compatible endpoint/key pairs.
-- **Discover models across providers:** Models / Detect / Refresh can build a combined catalogue; model IDs are provider-prefixed when needed (for example, `openai::gpt-4o`).
-- **No Stapler-hosted inference layer:** requests go from the adapter to the configured endpoint. Provider usage and charges are governed by that provider.
-- **No hard-coded vendor allowlist:** compatible endpoints can be configured without adding a vendor to Stapler's code.
-- **Paperclip-native workflow:** supports the adapter contract, Tool Gateway / MCP where host auth is available, and Paperclip issue tools.
+Paperclip's built-in provider integrations and BYOK support are useful—but they are not the same as being able to point an agent at any OpenAI-compatible endpoint. Stapler closes that gap.
+
+- **Bring your own endpoint and key:** connect the compatible API you already use or operate.
+- **Avoid provider-by-provider adapter work:** configure a new compatible endpoint through environment variables instead of adding another vendor integration to Stapler.
+- **Keep provider choice flexible:** use up to **16** configured endpoint/key pairs in one adapter.
+- **Choose from one model catalogue:** discover models across configured providers and select the provider/model combination that fits each agent.
+- **Keep the provider relationship yours:** requests go directly to the endpoint you configure; Stapler does not proxy inference through its own hosted service.
+- **Stay in the Paperclip workflow:** Stapler uses Paperclip's adapter model and supports its Tool Gateway / MCP integration when host authentication is available, plus Paperclip issue tools.
+
+**In short:** Paperclip orchestrates the work. Stapler broadens the models and compatible providers your agents can use.
 
 ## Features
 
@@ -125,7 +129,7 @@ Stapler now treats repeated **same calls with the same results** as a stronger l
 
 ## Compatible provider examples
 
-Stapler works with any host that exposes OpenAI-compatible `/models` and `/chat/completions`. The **slot id** column is what appears in the UI and in prefixed model ids — it is extracted from the URL hostname (see [How slot ids work](#how-slot-ids-work)).
+The endpoints below are configuration examples for APIs that expose OpenAI-compatible `/models` and `/chat/completions` routes. They illustrate how to configure providers; exact behavior depends on the endpoint and API features it exposes. The **slot id** column is what appears in the UI and in prefixed model ids — it is extracted from the URL hostname (see [How slot ids work](#how-slot-ids-work)).
 
 ### Major cloud APIs
 
