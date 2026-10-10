@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="420" viewBox="0 0 1200 420" role="img" aria-labelledby="title desc">
+  <title id="title">How Stapler extends Paperclip</title>
+  <desc id="desc">Paperclip orchestrates agents. Stapler connects those agents to operator-configured OpenAI-compatible providers using the operator's own endpoints and API keys.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#101827"/>
+      <stop offset="1" stop-color="#182b3d"/>
+    </linearGradient>
+    <linearGradient id="stapler" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffcf70"/>
+      <stop offset="1" stop-color="#f29d38"/>
+    </linearGradient>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#8da6bb"/>
+    </marker>
+    <style>
+      .heading{font:700 24px system-ui,-apple-system,Segoe UI,sans-serif;fill:#f7fafc}
+      .sub{font:400 15px system-ui,-apple-system,Segoe UI,sans-serif;fill:#b8c8d8}
+      .small{font:600 13px system-ui,-apple-system,Segoe UI,sans-serif;fill:#dce7f0;letter-spacing:.7px}
+      .provider{font:600 16px system-ui,-apple-system,Segoe UI,sans-serif;fill:#f7fafc}
+    </style>
+  </defs>
+  <rect width="1200" height="420" rx="26" fill="url(#bg)"/>
+  <text x="56" y="55" class="small" fill="#ffcf70">ONE ADAPTER · MORE PROVIDER CHOICE</text>
+  <text x="56" y="91" class="heading">Paperclip orchestrates. Stapler connects.</text>
+  <text x="56" y="118" class="sub">Your agents, your API keys, your chosen OpenAI-compatible endpoints.</text>
+
+  <rect x="56" y="160" width="250" height="174" rx="18" fill="#22364a" stroke="#536b80" stroke-width="1.5"/>
+  <text x="82" y="198" class="small">ORCHESTRATION</text>
+  <text x="82" y="234" class="heading">Paperclip</text>
+  <rect x="82" y="253" width="198" height="54" rx="10" fill="#304b63"/>
+  <circle cx="102" cy="273" r="5" fill="#7dd3a7"/>
+  <circle cx="102" cy="290" r="5" fill="#7dd3a7"/>
+  <text x="118" y="278" class="sub">Agent A</text>
+  <text x="118" y="295" class="sub">Agent B</text>
+
+  <path d="M306 247 H375" stroke="#8da6bb" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+
+  <rect x="386" y="160" width="270" height="174" rx="18" fill="#3a3024" stroke="#f0ad4e" stroke-width="2"/>
+  <rect x="408" y="181" width="46" height="46" rx="12" fill="url(#stapler)"/>
+  <path d="M419 198 H443 M422 204 H440 M425 210 H437" stroke="#3a3024" stroke-width="3" stroke-linecap="round"/>
+  <text x="469" y="198" class="small" fill="#ffcf70">EXTERNAL ADAPTER</text>
+  <text x="408" y="252" class="heading">Stapler</text>
+  <text x="408" y="279" class="sub">Up to 16 provider slots</text>
+  <text x="408" y="301" class="sub">Unified model discovery</text>
+
+  <path d="M656 247 H725" stroke="#8da6bb" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+
+  <rect x="736" y="145" width="408" height="204" rx="18" fill="#22364a" stroke="#536b80" stroke-width="1.5"/>
+  <text x="762" y="181" class="small">YOUR CONFIGURED ENDPOINTS</text>
+  <rect x="762" y="199" width="170" height="54" rx="10" fill="#304b63"/>
+  <circle cx="782" cy="226" r="6" fill="#7dd3a7"/>
+  <text x="798" y="231" class="provider">Cloud APIs</text>
+  <rect x="948" y="199" width="170" height="54" rx="10" fill="#304b63"/>
+  <circle cx="968" cy="226" r="6" fill="#7dd3a7"/>
+  <text x="984" y="231" class="provider">Model routers</text>
+  <rect x="762" y="267" width="170" height="54" rx="10" fill="#304b63"/>
+  <circle cx="782" cy="294" r="6" fill="#7dd3a7"/>
+  <text x="798" y="299" class="provider">Self-hosted</text>
+  <rect x="948" y="267" width="170" height="54" rx="10" fill="#304b63"/>
+  <circle cx="968" cy="294" r="6" fill="#7dd3a7"/>
+  <text x="984" y="299" class="provider">Local models</text>
+
+  <text x="56" y="382" class="sub">Requests go to the endpoint you configure. Provider credentials and billing stay with you.</text>
+</svg>
